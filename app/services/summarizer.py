@@ -1,0 +1,216 @@
+import json
+import asyncio
+import google.generativeai as genai
+from typing import Dict, Any
+from app.core.config import get_settings
+from app.models.schemas import ChatResponse, ChartData
+from app.utils.logger import logger
+
+settings = get_settings()
+genai.configure(api_key=settings.GEMINI_API_KEY)
+
+class SummarizerService:
+    def __init__(self):
+        self.model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction="""
+            You are a senior multi-source analyst.
+            Synthesize a comprehensive report using Market, News, and Social data.
+            
+            Output JSON format:
+            {
+                "explanation": "Clear, concise 2-3 paragraph answer.",
+                "insights": ["List of 3-5 key bullet points."],
+                "asset": "bitcoin | ethereum | null",
+                "chart_data": {
+                    "title": "Chart Title",
+                    "labels": ["Label A", "Label B"],
+                    "values": [10, 20],
+                    "x_label": "X Axis",
+                    "y_label": "Y Axis"
+                } OR null
+            }
+            
+            Rules:
+            - "asset": Identify the specific CoinGecko ID (e.g., 'bitcoin', 'ethereum') ONLY if valid market data exists in 'analysis'. 
+            - CRITICAL: If 'analysis' or 'stats' contains "error", "not found", or is empty, set "asset" to null. Do NOT guess.
+            - "chart_data": Create only if numerical history exists.
+            - If the user query is conceptual (e.g., "What is DSA?"), set "asset" to null.
+            """
+        )
+
+    async def summarize(self, query: str, analysis: Dict[str, Any]) -> ChatResponse:
+        """
+        Generates the final response with explanation, insights, and optional chart (Async).
+        """
+        logger.info("Summarizer: Generating response...")
+        
+        user_content = f"""
+        User Query: {query}
+        Analysis: {analysis.get('text_summary')}
+        Stats: {analysis.get('key_stats')}
+        """
+
+        try:
+            # Ultra-Fast Fallback logic
+            max_retries = 1 
+            for attempt in range(max_retries + 1):
+                try:
+                    # Enforce strict 5s timeout.
+                    response = await asyncio.wait_for(
+                        self.model.generate_content_async(
+                            user_content,
+                            generation_config=genai.GenerationConfig(
+                                response_mime_type="application/json",
+                                temperature=0.3
+                            )
+                        ),
+                        timeout=5.0
+                    )
+                    break 
+                except Exception as e:
+                    if attempt < max_retries:
+                        logger.warning(f"Summarizer API Slow/Error. Retrying...")
+                        await asyncio.sleep(1)
+                    else:
+                        raise e
+            
+            data = json.loads(response.text)
+            
+            return ChatResponse(**data)
+
+        except Exception as e:
+            logger.error(f"Summarizer Error: {e}")
+            
+            # --- Rule-Based Fallback ---
+            # If AI fails (likely 429), try to provide a useful response from raw data.
+            
+            fallback_asset = None
+            q_lower = query.lower()
+            
+            # 1. Detect Asset for Chart
+            common_coins = {
+                "bitcoin": "bitcoin", "btc": "bitcoin",
+                "ethereum": "ethereum", "eth": "ethereum",
+                "solana": "solana", "sol": "solana",
+                "dogecoin": "dogecoin", "doge": "dogecoin",
+                "cardano": "cardano", "ada": "cardano",
+                "ripple": "ripple", "xrp": "ripple",
+                "polkadot": "polkadot", "dot": "polkadot",
+                "polygon": "polygon", "matic": "polygon",
+                "chainlink": "chainlink", "link": "chainlink",
+                "litecoin": "litecoin", "ltc": "litecoin",
+                "shiba": "shiba-inu", "shib": "shiba-inu",
+                "pepe": "pepe", "avax": "avalanche-2"
+            }
+            
+            for key, val in common_coins.items():
+                if key in q_lower:
+                    fallback_asset = val
+                    break
+            
+            # 2. Construct Explanation (User-Friendly Fallback)
+            raw_summary = analysis.get("text_summary", "")
+            
+            if fallback_asset:
+                # Case A: Market Query (Asset Detected) -> Show Chart
+                explanation = f"I've pulled up the live **{fallback_asset.title()}** market data for you."
+                insights_list = ["Live Chart Updated", "AI Analysis: Temporarily Unavailable"]
+                
+            elif raw_summary and len(raw_summary) > 10:
+                # Case B: Concept Query (Wikipedia/Data Available) -> Show Info
+                # Clean up the raw summary for display
+                explanation = f"{raw_summary}\n\n*(Standard search result found while AI is busy)*"
+                insights_list = ["Quick Definition", "Source: External Data"]
+                
+            else:
+                # Case C: Unknown Query -> Help Message
+                explanation = "I couldn't retrieve analysis for that query. Try asking about a specific coin like **Bitcoin** or **Solana**."
+                insights_list = ["Tip: Check spelling", "Tip: Ask for specific assets"]
+
+            return ChatResponse(
+                explanation=explanation,
+                insights=insights_list,
+                asset=fallback_asset,
+                chart_data=None
+            )
+
+    async def get_concept_info(self, term: str) -> Dict[str, Any]:
+        """
+        Directly uses Gemini to generate info for a non-crypto concept.
+        Falls back to Wikipedia if AI is down.
+        """
+        prompt = f"""
+        Explain the concept of "{term}" for a high-level analytics dashboard.
+        
+        Output exact JSON:
+        {{
+            "explanation": "2-3 paragraph comprehensive definition.",
+            "chat_summary": "A 1-sentence concise version focusing on 'Why this matters now' for a chat window.",
+            "insights": ["Supplementary Insight 1", "Supplementary Insight 2", "Supplementary Insight 3"],
+            "concept_kpis": [
+                {{"label": "Category", "value": "e.g., Software"}},
+                {{"label": "Metric 2", "value": "e.g., Origin Year"}},
+                {{"label": "Metric 3", "value": "e.g., Usage Level"}}
+            ]
+        }}
+        """
+        
+        source_url = None
+        wiki_extract = ""
+        
+        # Pre-fetch Wikipedia for better context and source link
+        try:
+            from app.services.fetcher import FetcherService
+            f = FetcherService()
+            wiki_data = await f._fetch_wikipedia(term)
+            if "error" not in wiki_data:
+                source_url = wiki_data.get("content_urls", {}).get("desktop", {}).get("page")
+                wiki_extract = wiki_data.get("extract", "")
+        except:
+            pass
+
+        # If we have wiki data, nudge Gemini to use it or augment it
+        full_prompt = prompt
+        if wiki_extract:
+            full_prompt += f"\n\nContext from Wikipedia: {wiki_extract}"
+
+        try:
+            response = await asyncio.wait_for(
+                self.model.generate_content_async(
+                    full_prompt,
+                    generation_config=genai.GenerationConfig(
+                        response_mime_type="application/json",
+                        temperature=0.2
+                    )
+                ),
+                timeout=7.0
+            )
+            data = json.loads(response.text)
+            data["source_url"] = source_url
+            return data
+            
+        except Exception as e:
+            logger.error(f"get_concept_info Error: {e}")
+            
+            # Robust Fallback
+            if wiki_extract:
+                return {
+                    "explanation": wiki_extract,
+                    "chat_summary": f"Wikipedia definition for {term}.",
+                    "insights": ["Source: Wikipedia", "Direct Definition", "AI Analysis Unavailable"],
+                    "concept_kpis": [
+                        {"label": "Source", "value": "Wikipedia"},
+                        {"label": "Type", "value": "Definition"},
+                        {"label": "Topic", "value": term.title()}
+                    ],
+                    "source_url": source_url
+                }
+
+            return {
+                "explanation": f"I couldn't retrieve information for '{term}' at this time.",
+                "chat_summary": "System error fetching data.",
+                "insights": ["Check connectivity", "Try a different term"],
+                "concept_kpis": [],
+                "source_url": None
+            }

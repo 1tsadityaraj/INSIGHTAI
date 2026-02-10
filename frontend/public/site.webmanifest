@@ -1,0 +1,8 @@
+{
+  "name": "InsightAI",
+  "short_name": "InsightAI",
+  "icons": [],
+  "theme_color": "#10B981",
+  "background_color": "#F9FAFB",
+  "display": "standalone"
+}
