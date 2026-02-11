@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL = "http://localhost:8000/api/v1";
 
 export const market = {
     /**
@@ -10,7 +10,7 @@ export const market = {
     fetchMarketData: async (coinId = "bitcoin", days = 30) => {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s Timeout
 
             const response = await fetch(`${API_BASE_URL}/market/${coinId}?days=${days}`, {
                 signal: controller.signal
