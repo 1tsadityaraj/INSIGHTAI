@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from app.models.schemas import ChatRequest, UnifiedResponse, ExecutionPlan, SubTask
 from app.services.planner import PlannerService
 from app.services.fetcher import FetcherService
@@ -6,6 +6,7 @@ from app.services.analyzer import AnalyzerService
 from app.services.summarizer import SummarizerService
 from app.services.market import MarketService
 from app.utils.logger import logger
+from app.services.rate_limiter import limiter
 
 from app.core.config import get_settings
 from app.services.ai_provider import MockAIProvider
@@ -21,13 +22,14 @@ summarizer = SummarizerService()
 market_service = MarketService()
 
 @router.post("/chat", response_model=UnifiedResponse)
-async def chat(request: ChatRequest):
+@limiter.limit("5/minute") # Strict 5 req/min for expensive AI calls
+async def chat(request: Request, body: ChatRequest):
     """
     Unified Chat Endpoint.
-    Logic: Classify Intent -> Route (Market vs Concept) -> Standardized Response
+    Logic: Classify Intent -> Route (Market vs Concept vs Comparison vs Forex) -> Standardized Response
     """
     try:
-        query = request.query
+        query = body.query
         logger.info(f"API: Received query '{query}'")
         
         # 0. DEV_MODE Orchestration Bypass
@@ -36,12 +38,61 @@ async def chat(request: ChatRequest):
              return await mock_provider.get_unified_response(query)
         
         # 1. Intent Detection (Gemini)
-        # Returns {"intent": "MARKET" | "CONCEPT", "subject": "string"}
+        # Returns {"intent": "MARKET" | "CONCEPT" | "COMPARISON" | "FOREX", "subject": ..., "assets": ...}
         intent_data = await planner.get_query_intent(query)
         intent = intent_data.get("intent", "CONCEPT")
         subject = intent_data.get("subject", query)
         
         logger.info(f"API: Intent is {intent} for subject '{subject}'")
+
+        # 3. COMPARISON MODE
+        if intent == "COMPARISON":
+            assets = intent_data.get("assets", [])
+            comparison_results = []
+            
+            # Fetch data for each asset
+            for asset_name in assets:
+                # Resolve ID
+                coin_id = await market_service.search_coin(asset_name)
+                if coin_id:
+                    chart = await market_service.get_market_chart(coin_id, days="30")
+                    kpi = await market_service.get_coin_data(coin_id)
+                    
+                    if chart and kpi:
+                        comparison_results.append({
+                            "symbol": kpi.get("symbol", asset_name).upper(),
+                            "name": kpi.get("name", asset_name),
+                            "chart_data": chart,
+                            "current_price": kpi.get("current_price_usd"),
+                            "market_cap": kpi.get("market_cap_usd")
+                        })
+            
+            return UnifiedResponse(
+                query=query,
+                type="comparison",
+                content=f"Comparing {', '.join(assets)} based on recent market data.",
+                comparison_assets=comparison_results,
+                research_plan=[] # No complex plan for simple comparison yet
+            )
+
+        # 4. FOREX MODE
+        if intent == "FOREX":
+            base = intent_data.get("base", "USD")
+            target = intent_data.get("target", "EUR")
+            
+            rate_data = await market_service.get_forex_rate(base, target)
+            chart_data = await market_service.get_forex_chart(base, target, days="30")
+            
+            return UnifiedResponse(
+                query=query,
+                type="forex",
+                content=f"Current exchange rate for {base}/{target}.",
+                forex_data={
+                    "rate": rate_data,
+                    "chart": chart_data
+                },
+                research_plan=[]
+            )
 
         if intent == "MARKET":
             # 2a. Dynamic Market Path (Planner now handles structure)

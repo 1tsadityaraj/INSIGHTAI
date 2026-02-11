@@ -50,16 +50,22 @@ class PlannerService:
         prompt = f"""
         Classify the intent of this user query for a financial/knowledge app.
         
-        Is this a query about a cryptocurrency/market data OR a general concept/knowledge question?
-        
-        Rules:
-        - If about a coin, price, or market chart: intent="MARKET", subject="coin name or ticker".
-        - If anything else (definition, science, history, programming): intent="CONCEPT", subject="the term".
+        Intents:
+        1. MARKET: Info about a SINGLE cryptocurrency (price, chart, market cap).
+        2. COMPARISON: Request to COMPARE multiple assets (e.g. "Bitcoin vs Ethereum", "Compare SOL and ADA").
+        3. FOREX: Request for fiat currency exchange rates (e.g. "USD to INR", "100 EUR in GBP").
+        4. CONCEPT: General knowledge, definitions, history, science.
         
         User Query: "{query}"
         
         Output exact JSON:
-        {{ "intent": "MARKET" | "CONCEPT", "subject": "string" }}
+        {{
+            "intent": "MARKET" | "CONCEPT" | "COMPARISON" | "FOREX",
+            "subject": "string (main topic)",
+            "assets": ["asset1", "asset2"] (ONLY for COMPARISON, else null),
+            "base": "USD" (ONLY for FOREX),
+            "target": "EUR" (ONLY for FOREX)
+        }}
         """
         
         try:

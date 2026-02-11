@@ -7,3 +7,7 @@ pandas>=2.2.0
 numpy>=1.26.0
 httpx>=0.26.0
 python-dotenv>=1.0.0
+redis>=5.0.1
+apscheduler>=3.10.4
+slowapi>=0.1.9
+tenacity>=8.2.3

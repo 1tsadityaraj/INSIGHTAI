@@ -3,8 +3,6 @@ import asyncio
 import random
 from typing import List, Dict, Any
 from app.models.schemas import ExecutionPlan, FetchedData
-from app.models.schemas import ExecutionPlan, FetchedData
-from app.utils.logger import logger
 from app.utils.logger import logger
 from app.services.market import MarketService
 from app.services.technical_provider import TechnicalProvider
@@ -45,7 +43,7 @@ class FetcherService:
             elif source == "news":
                 data = await self._fetch_news(query)
             elif source == "social_sentiment":
-                 data = await self._fetch_social_sentiment(query)
+                data = await self._fetch_social_sentiment(query)
             elif source == "technical_docs":
                 data = await self.tech_provider.fetch_technical_details(query)
             else:
@@ -100,11 +98,7 @@ class FetcherService:
 
     async def _fetch_wikipedia(self, query: str) -> Dict[str, Any]:
         """
-        Fetches Wikipedia info using a 2-step process:
-        1. Search for the best matching article title.
-        2. Fetch the summary for that specific title.
-        This resolves issues where expanded queries (e.g. "Data Structures and Algorithms") 
-        don't directly match article slugs.
+        Fetches Wikipedia info using a 2-step process.
         """
         headers = {
             "User-Agent": "InsightAI/1.0 (https://github.com/aditya/InsightAI; contact@insightai.com)"
@@ -146,24 +140,20 @@ class FetcherService:
 
     async def _fetch_crypto(self, query: str) -> Dict[str, Any]:
         """
-        Fetches crypto data using the robust MarketService (handles symbol resolution).
+        Fetches crypto data using the robust MarketService.
         """
-        # cleans query "Bitcoin price" -> "bitcoin"
         clean_query = query.lower().replace(" price", "").replace(" market cap", "").strip()
-        
-        # Use the centralized MarketService which has the symbol mapping/resolution logic
         return await self.market_service.get_coin_data(clean_query)
 
     async def _fetch_crypto_chart(self, query: str) -> Dict[str, Any]:
         """
-        Fetches historical chart data.
+        Fetches historical chart data via MarketService.
         """
-        # Improved coin_id detection (simple fallback for now)
-        coin_id = query.lower().replace(" ", "-") 
+        clean_query = query.lower().replace(" chart", "").replace(" trend", "").strip()
         # Default to 30 days for chat-initiated charts
-        data = await self.market_service.get_market_chart(coin_id, days=30)
+        data = await self.market_service.get_market_chart(clean_query, days="30")
         
-        if not data:
+        if not data or (isinstance(data, dict) and "error" in data):
             return {"error": "Chart data unavailable"}
             
         return data

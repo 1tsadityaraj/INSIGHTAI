@@ -24,6 +24,7 @@ export const market = {
 
             return await response.json();
         } catch (error) {
+            if (error.name === 'AbortError') throw error; // Re-throw for caller to handle silently
             console.error("Market Service Error:", error);
             throw error;
         }

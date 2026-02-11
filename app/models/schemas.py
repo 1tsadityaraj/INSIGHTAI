@@ -40,7 +40,7 @@ class DeepDiveSection(BaseModel):
 
 class UnifiedResponse(BaseModel):
     query: str
-    type: str = Field(..., description="'market', 'concept', or 'error'")
+    type: str = Field(..., description="'market', 'concept', 'comparison', 'forex', or 'error'")
     content: str
     chat_summary: Optional[str] = None
     chart_data: Optional[ChartData] = None
@@ -55,6 +55,12 @@ class UnifiedResponse(BaseModel):
     # New Multi-Step Agent Fields
     research_plan: List[SubTask] = Field(default_factory=list)
     deep_dive: List[DeepDiveSection] = Field(default_factory=list)
+
+    # Comparison Mode
+    comparison_assets: Optional[List[Dict[str, Any]]] = Field(default=None, description="For multi-asset comparison")
+
+    # Forex Mode
+    forex_data: Optional[Dict[str, Any]] = Field(default=None, description="For forex pairs")
 
 class ChatResponse(BaseModel):
     explanation: str

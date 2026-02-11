@@ -33,4 +33,42 @@ export const api = {
             throw error;
         }
     },
+    async getWatchlist() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/watchlist`);
+            if (!response.ok) throw new Error("Failed to fetch watchlist");
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return [];
+        }
+    },
+
+    async addToWatchlist(assetId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/watchlist`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ asset_id: assetId }),
+            });
+            if (!response.ok) throw new Error("Failed to add to watchlist");
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
+
+    async removeFromWatchlist(assetId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/watchlist/${assetId}`, {
+                method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Failed to remove from watchlist");
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    },
 };

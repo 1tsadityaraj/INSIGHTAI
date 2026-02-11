@@ -1,4 +1,5 @@
 import os
+from typing import List
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -16,9 +17,22 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     DEV_MODE: bool = False  # If True, forces use of MockAIProvider
     
+    # Redis Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # CORS Configuration
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://insightai-five.vercel.app" # Add Vercel domain if known, strict otherwise
+    ]
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow" # Allow extra fields like REDIS_URL from env
 
 @lru_cache()
 def get_settings():
