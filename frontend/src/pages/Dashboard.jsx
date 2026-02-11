@@ -4,6 +4,8 @@ import ChatInput from "../components/ChatInput";
 import KPICard from "../components/KPICard";
 import MarketChart from "../components/MarketChart";
 import { api } from "../services/api";
+import FloatingStatusBubble from "../components/FloatingStatusBubble";
+import FloatingActionButton from "../components/FloatingActionButton";
 import { market } from "../services/market"; // Import market service
 import { Sparkles, TrendingUp, DollarSign, Activity } from "lucide-react";
 
@@ -21,6 +23,8 @@ const Dashboard = () => {
         social_sentiment: null,
         news_headlines: [],
         source_url: null,
+        research_plan: [], // New check
+        deep_dive: [],     // New check
         loading: true,
         error: null
     });
@@ -111,6 +115,7 @@ const Dashboard = () => {
                     type: "market",
                     content: data.content,
                     insights: data.insights || [],
+                    research_plan: data.research_plan || [],
                     social_sentiment: data.social_sentiment,
                     news_headlines: data.news_headlines || []
                 }));
@@ -123,6 +128,8 @@ const Dashboard = () => {
                     content: data.content,
                     insights: data.insights || [],
                     concept_kpis: data.concept_kpis || [],
+                    research_plan: data.research_plan || [],
+                    deep_dive: data.deep_dive || [],
                     social_sentiment: data.social_sentiment,
                     news_headlines: data.news_headlines || [],
                     source_url: data.source_url,
@@ -159,7 +166,7 @@ const Dashboard = () => {
 
                 {/* KPI Cards */}
                 {marketData.type === 'concept' && marketData.concept_kpis?.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className={`grid gap-4 ${marketData.concept_kpis.length > 3 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5' : 'grid-cols-3'}`}>
                         {marketData.concept_kpis.map((ck, i) => (
                             <KPICard
                                 key={i}
@@ -229,6 +236,24 @@ const Dashboard = () => {
                                     <Sparkles className="text-primary w-7 h-7" />
                                     Conceptual Overview
                                 </h2>
+
+                                {marketData.research_plan && marketData.research_plan.length > 0 && (
+                                    <div className="mb-8 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                        <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <Sparkles className="w-3 h-3" /> Research Methodology
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {marketData.research_plan.map((task, i) => (
+                                                <div key={i} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-blue-100 text-xs text-blue-700 shadow-sm">
+                                                    <span className="w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] font-bold">✓</span>
+                                                    {task.description}
+                                                    <span className="text-gray-400 text-[10px] uppercase">({task.data_source})</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="prose prose-blue max-w-none text-gray-600 leading-relaxed text-lg mb-10">
                                     {marketData.content}
                                 </div>
@@ -240,6 +265,35 @@ const Dashboard = () => {
                                             {marketData.insights.map((insight, i) => (
                                                 <div key={i} className="bg-gradient-to-br from-white to-gray-50 border border-gray-100 p-6 rounded-xl text-sm text-gray-700 shadow-sm">
                                                     {insight}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Technical Deep-Dive Sections */}
+                                {marketData.deep_dive && marketData.deep_dive.length > 0 && (
+                                    <div className="mt-10 space-y-4">
+                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Activity className="w-4 h-4" /> Technical Deep-Dive
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {marketData.deep_dive.map((section, idx) => (
+                                                <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
+                                                    <details className="group">
+                                                        <summary className="flex items-center justify-between p-4 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                                            <div className="flex items-center gap-3 font-semibold text-gray-700">
+                                                                {section.icon === 'server' && <Activity className="w-4 h-4 text-blue-500" />}
+                                                                {section.icon === 'zap' && <TrendingUp className="w-4 h-4 text-orange-500" />}
+                                                                {section.icon === 'briefcase' && <DollarSign className="w-4 h-4 text-purple-500" />}
+                                                                {section.title}
+                                                            </div>
+                                                            <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                                                        </summary>
+                                                        <div className="p-6 bg-white prose prose-sm text-gray-600 border-t border-gray-200">
+                                                            {section.content}
+                                                        </div>
+                                                    </details>
                                                 </div>
                                             ))}
                                         </div>
@@ -341,7 +395,10 @@ const Dashboard = () => {
                     <ChatInput onSend={handleSend} isLoading={isLoading} />
                 </div>
             </div>
-        </div>
+
+            <FloatingStatusBubble isProcessing={isLoading} />
+            <FloatingActionButton onInsightRequest={() => handleSend("Summarize the current market data and provide key insights.")} />
+        </div >
     );
 };
 

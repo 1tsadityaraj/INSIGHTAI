@@ -7,7 +7,19 @@ const KPICard = ({ label, value, subValue, icon: Icon, trend }) => {
     return (
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between h-full min-h-[100px]">
             <div className="flex justify-between items-start mb-2">
-                <span className="text-gray-500 text-sm font-medium uppercase tracking-wide">{label}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm font-medium uppercase tracking-wide">{label}</span>
+                    {/* Live Analysis Pulse */}
+                    <div className="relative group">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <div className="absolute left-4 top-0 hidden group-hover:block bg-black text-white text-[10px] px-2 py-1 rounded w-max z-10">
+                            Live Stream Active
+                        </div>
+                    </div>
+                </div>
                 {Icon && <Icon className="w-5 h-5 text-gray-400" />}
             </div>
 

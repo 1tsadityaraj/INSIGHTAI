@@ -3,8 +3,10 @@ import asyncio
 import google.generativeai as genai
 from typing import Dict, Any
 from app.core.config import get_settings
-from app.models.schemas import ChatResponse, ChartData
+from app.models.schemas import ChatResponse, ChartData, DeepDiveSection, ConceptKPI
 from app.utils.logger import logger
+
+from app.services.ai_provider import MockAIProvider
 
 settings = get_settings()
 genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -38,6 +40,7 @@ class SummarizerService:
             - If the user query is conceptual (e.g., "What is DSA?"), set "asset" to null.
             """
         )
+        self.mock_provider = MockAIProvider()
 
     async def summarize(self, query: str, analysis: Dict[str, Any]) -> ChatResponse:
         """
@@ -52,6 +55,11 @@ class SummarizerService:
         """
 
         try:
+            # 0. Check DEV_MODE
+            if settings.DEV_MODE:
+                logger.info("DEV_MODE: Using MockAIProvider.")
+                return await self.mock_provider.generate_response(query, user_content)
+
             # Ultra-Fast Fallback logic
             max_retries = 1 
             for attempt in range(max_retries + 1):
@@ -81,6 +89,13 @@ class SummarizerService:
 
         except Exception as e:
             logger.error(f"Summarizer Error: {e}")
+            
+            # --- Tier 1 Fallback: Mock AI Provider (e.g. for 429 API Limit) ---
+            try:
+                logger.warning("Attempting MockAIProvider fallback due to API error...")
+                return await self.mock_provider.generate_response(query, user_content)
+            except Exception as mock_e:
+                logger.error(f"Mock Provider Failed: {mock_e}")
             
             # --- Rule-Based Fallback ---
             # If AI fails (likely 429), try to provide a useful response from raw data.
@@ -214,3 +229,79 @@ class SummarizerService:
                 "concept_kpis": [],
                 "source_url": None
             }
+
+    async def summarize_concept_deep_dive(self, query: str, fetched_data: list) -> Dict[str, Any]:
+        """
+        Agents 2.0: Synthesizes a deep dive report from multiple fetched sources.
+        """
+        logger.info(f"Summarizer: Generating Deep Dive for '{query}'...")
+
+        # 1. Aggregation
+        wiki_data = next((item.data for item in fetched_data if item.source == "wikipedia"), {})
+        tech_data_str = next((item.data for item in fetched_data if item.source == "technical_docs"), "{}")
+        social_data = next((item.data for item in fetched_data if item.source == "social_sentiment"), {})
+        news_data = next((item.data for item in fetched_data if item.source == "news"), {})
+        
+        # Parse technical data if it's a JSON string (from TechnicalProvider)
+        tech_ops = {}
+        if isinstance(tech_data_str, str):
+            try:
+                tech_ops = json.loads(tech_data_str)
+            except:
+                pass
+        
+        deep_dive_sections = tech_ops.get("deep_dive_sections", [])
+        technical_kpis = tech_ops.get("technical_kpis", [])
+
+        # 2. Main Synthesis Prompt
+        prompt = f"""
+        Synthesize a Research Report for "{query}".
+        
+        Context:
+        - Definition: {wiki_data.get('extract', 'N/A')}
+        - Technical Internals: {tech_ops}
+        - Social Sentiment: {social_data}
+        - Recent News: {news_data.get('headlines', [])}
+        
+        Output JSON:
+        {{
+            "explanation": "A comprehensive introductory overview (2 paragraphs).",
+            "chat_summary": "A concise insight for the chat window.",
+            "insights": ["High-level insight 1", "High-level insight 2", "High-level insight 3"],
+            "concept_kpis": {technical_kpis if technical_kpis else "Generate 5 technical KPIs [Label, Value]"}
+        }}
+        """
+        
+        # Use AI to smooth out the edges if needed, OR just compose if data is good.
+        # For speed/reliability, we'll try AI synthesis but fallback to direct mapping.
+        
+        try:
+             response = await asyncio.wait_for(
+                self.model.generate_content_async(
+                    prompt,
+                    generation_config=genai.GenerationConfig(
+                        response_mime_type="application/json",
+                        temperature=0.3
+                    )
+                ),
+                timeout=8.0
+            )
+             data = json.loads(response.text)
+        except Exception as e:
+            logger.error(f"Deep Dive Synthesis Error: {e}")
+            # Fallback Synthesis
+            data = {
+                "explanation": wiki_data.get('extract', f"Deep dive analysis for {query}."),
+                "chat_summary": f"Analysis complete for {query}.",
+                "insights": ["Data aggregated from multiple sources."],
+                "concept_kpis": technical_kpis
+            }
+            
+        return {
+            "explanation": data.get("explanation"),
+            "chat_summary": data.get("chat_summary"),
+            "insights": data.get("insights", []),
+            "concept_kpis": data.get("concept_kpis", []),
+            "deep_dive": deep_dive_sections,
+            "source_url": wiki_data.get("content_urls", {}).get("desktop", {}).get("page")
+        }

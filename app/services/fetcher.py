@@ -5,11 +5,14 @@ from typing import List, Dict, Any
 from app.models.schemas import ExecutionPlan, FetchedData
 from app.models.schemas import ExecutionPlan, FetchedData
 from app.utils.logger import logger
+from app.utils.logger import logger
 from app.services.market import MarketService
+from app.services.technical_provider import TechnicalProvider
 
 class FetcherService:
     def __init__(self):
         self.market_service = MarketService()
+        self.tech_provider = TechnicalProvider()
     
     async def execute_plan(self, plan: ExecutionPlan) -> List[FetchedData]:
         """
@@ -42,7 +45,9 @@ class FetcherService:
             elif source == "news":
                 data = await self._fetch_news(query)
             elif source == "social_sentiment":
-                data = await self._fetch_social_sentiment(query)
+                 data = await self._fetch_social_sentiment(query)
+            elif source == "technical_docs":
+                data = await self.tech_provider.fetch_technical_details(query)
             else:
                 data = {"error": f"Unknown source: {source}"}
             

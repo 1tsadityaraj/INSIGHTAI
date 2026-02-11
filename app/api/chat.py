@@ -7,7 +7,12 @@ from app.services.summarizer import SummarizerService
 from app.services.market import MarketService
 from app.utils.logger import logger
 
+from app.core.config import get_settings
+from app.services.ai_provider import MockAIProvider
+
 router = APIRouter()
+settings = get_settings()
+mock_provider = MockAIProvider()
 
 planner = PlannerService()
 fetcher = FetcherService()
@@ -25,6 +30,11 @@ async def chat(request: ChatRequest):
         query = request.query
         logger.info(f"API: Received query '{query}'")
         
+        # 0. DEV_MODE Orchestration Bypass
+        if settings.DEV_MODE:
+             logger.warning(" DEV_MODE is ACTIVE. Bypassing external APIs.")
+             return await mock_provider.get_unified_response(query)
+        
         # 1. Intent Detection (Gemini)
         # Returns {"intent": "MARKET" | "CONCEPT", "subject": "string"}
         intent_data = await planner.get_query_intent(query)
@@ -34,20 +44,14 @@ async def chat(request: ChatRequest):
         logger.info(f"API: Intent is {intent} for subject '{subject}'")
 
         if intent == "MARKET":
-            # 2a. Dynamic Market Path
+            # 2a. Dynamic Market Path (Planner now handles structure)
             asset_id = await market_service.search_coin(subject)
             
             if asset_id:
-                # Build plan for Market Fetcher (Now with News and Social!)
-                plan = ExecutionPlan(
-                    original_query=query,
-                    subtasks=[
-                        SubTask(id=1, description="Price", search_keywords=[asset_id], data_source="crypto"),
-                        SubTask(id=2, description="Chart", search_keywords=[asset_id], data_source="crypto_chart"),
-                        SubTask(id=3, description="Social Pulse", search_keywords=[asset_id], data_source="social_sentiment"),
-                        SubTask(id=4, description="News", search_keywords=[asset_id], data_source="news")
-                    ]
-                )
+                # Update Intent Data with precise subject
+                intent_data['subject'] = asset_id
+                plan = await planner.create_plan(query, intent_data)
+                
                 fetched_data = await fetcher.execute_plan(plan)
                 analysis = analyzer.analyze(fetched_data)
                 
@@ -59,8 +63,10 @@ async def chat(request: ChatRequest):
                 ai_resp = await summarizer.summarize(query, analysis)
                 
                 return UnifiedResponse(
+                    # Passing query, type, plan for UI progress
                     query=query,
                     type="market",
+                    research_plan=plan.subtasks,
                     content=ai_resp.explanation,
                     chart_data=ai_resp.chart_data,
                     insights=ai_resp.insights,
@@ -70,24 +76,17 @@ async def chat(request: ChatRequest):
                     is_error=False
                 )
 
-        # 2b. Concept Path (fallback for Market if fetch fails or explicit Concept)
+        # 2b. Concept Path (Multi-Step Deep Dive)
         logger.info(f"API: Routing to Concept path for '{subject}'")
         
-        # Build plan for Concept Fetcher (Wikipedia + Social + News)
-        plan = ExecutionPlan(
-            original_query=query,
-            subtasks=[
-                SubTask(id=1, description="Wikipedia", search_keywords=[subject], data_source="wikipedia"),
-                SubTask(id=2, description="Social Pulse", search_keywords=[subject], data_source="social_sentiment"),
-                SubTask(id=3, description="News", search_keywords=[subject], data_source="news")
-            ]
-        )
-        fetched_data = await fetcher.execute_plan(plan)
-        analysis = analyzer.analyze(fetched_data)
+        # Generative Planning
+        plan = await planner.create_plan(query, intent_data)
         
-        # Use existing concept_info logic for the structured definition, but use summarize for the synthesis
-        concept_info = await summarizer.get_concept_info(subject)
-        ai_resp = await summarizer.summarize(query, analysis)
+        # execute
+        fetched_data = await fetcher.execute_plan(plan)
+        
+        # Deep Synthesis
+        deep_analysis = await summarizer.summarize_concept_deep_dive(subject, fetched_data)
         
         # Extract news and social
         social = next((item.data for item in fetched_data if item.source == "social_sentiment"), None)
@@ -96,23 +95,22 @@ async def chat(request: ChatRequest):
         return UnifiedResponse(
             query=query,
             type="concept",
-            content=ai_resp.explanation, # Use the multi-source AI synthesis here!
-            chat_summary=concept_info.get("chat_summary"),
+            research_plan=plan.subtasks,
+            content=deep_analysis.get("explanation"), 
+            chat_summary=deep_analysis.get("chat_summary"),
             chart_data=None,
-            insights=ai_resp.insights, # Use multi-source insights
-            concept_kpis=concept_info.get("concept_kpis", []),
+            insights=deep_analysis.get("insights", []), 
+            concept_kpis=deep_analysis.get("concept_kpis", []),
+            deep_dive=deep_analysis.get("deep_dive", []), # Detailed technical sections
             social_sentiment=social,
             news_headlines=news.get("headlines", []),
-            source_url=concept_info.get("source_url"),
+            source_url=deep_analysis.get("source_url"),
             asset=None,
             is_error=False
         )
 
     except Exception as e:
         logger.error(f"API Error: {str(e)}", exc_info=True)
-        return UnifiedResponse(
-            query=request.query,
-            type="error",
-            content="Search unavailable. Please try again with a specific asset or term.",
-            is_error=True
-        )
+        # Fallback to Mock Provider on critical failure (e.g. 429, Network)
+        logger.warning("Critical Error encountered. Falling back to Mock Orchestrator.")
+        return await mock_provider.get_unified_response(query)

@@ -11,8 +11,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-flash-lite-latest" 
     
+    
     # App Environment
     DEBUG: bool = True
+    DEV_MODE: bool = False  # If True, forces use of MockAIProvider
     
     class Config:
         env_file = ".env"
