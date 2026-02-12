@@ -51,7 +51,14 @@ app.include_router(watchlist_router, prefix=settings.API_PREFIX)
 
 @app.on_event("startup")
 async def startup_event():
+    logger.info("Starting up application...")
     start_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down application...")
+    from app.core.redis_client import redis_manager
+    await redis_manager.close()
 
 @app.get("/")
 def health_check():

@@ -32,7 +32,26 @@ async def chat(request: Request, body: ChatRequest):
         query = body.query
         logger.info(f"API: Received query '{query}'")
         
-        # 0. DEV_MODE Orchestration Bypass
+        # --- CACHING LAYER ---
+        # 0. Check Redis Cache first
+        import hashlib
+        from app.core.redis_client import redis_client
+        
+        # Use MD5 for stable cache key (simpler than hash())
+        query_hash = hashlib.md5(query.encode()).hexdigest()
+        cache_key = f"chat:{query_hash}"
+        
+        if redis_client:
+            try:
+                cached_data = await redis_client.get(cache_key)
+                if cached_data:
+                    logger.info(f"Cache HIT for query: {query}")
+                    # Reconstruct UnifiedResponse from cached JSON
+                    return UnifiedResponse.model_validate_json(cached_data)
+            except Exception as e:
+                logger.error(f"Redis Cache Error: {e}")
+        
+        # 0.5. DEV_MODE Orchestration Bypass
         if settings.DEV_MODE:
              logger.warning(" DEV_MODE is ACTIVE. Bypassing external APIs.")
              return await mock_provider.get_unified_response(query)
@@ -44,6 +63,8 @@ async def chat(request: Request, body: ChatRequest):
         subject = intent_data.get("subject", query)
         
         logger.info(f"API: Intent is {intent} for subject '{subject}'")
+
+        response = None
 
         # 3. COMPARISON MODE
         if intent == "COMPARISON":
@@ -67,23 +88,23 @@ async def chat(request: Request, body: ChatRequest):
                             "market_cap": kpi.get("market_cap_usd")
                         })
             
-            return UnifiedResponse(
+            response = UnifiedResponse(
                 query=query,
                 type="comparison",
                 content=f"Comparing {', '.join(assets)} based on recent market data.",
                 comparison_assets=comparison_results,
                 research_plan=[] # No complex plan for simple comparison yet
             )
-
+            
         # 4. FOREX MODE
-        if intent == "FOREX":
+        elif intent == "FOREX":
             base = intent_data.get("base", "USD")
             target = intent_data.get("target", "EUR")
             
             rate_data = await market_service.get_forex_rate(base, target)
             chart_data = await market_service.get_forex_chart(base, target, days="30")
             
-            return UnifiedResponse(
+            response = UnifiedResponse(
                 query=query,
                 type="forex",
                 content=f"Current exchange rate for {base}/{target}.",
@@ -94,7 +115,7 @@ async def chat(request: Request, body: ChatRequest):
                 research_plan=[]
             )
 
-        if intent == "MARKET":
+        elif intent == "MARKET":
             # 2a. Dynamic Market Path (Planner now handles structure)
             asset_id = await market_service.search_coin(subject)
             
@@ -113,7 +134,7 @@ async def chat(request: Request, body: ChatRequest):
                 # AI synthesis
                 ai_resp = await summarizer.summarize(query, analysis)
                 
-                return UnifiedResponse(
+                response = UnifiedResponse(
                     # Passing query, type, plan for UI progress
                     query=query,
                     type="market",
@@ -126,39 +147,55 @@ async def chat(request: Request, body: ChatRequest):
                     asset=asset_id,
                     is_error=False
                 )
+            else:
+                 # Fallback if asset not found -> Treat as Concept?
+                 # For now, just error or generic response
+                 pass
 
         # 2b. Concept Path (Multi-Step Deep Dive)
-        logger.info(f"API: Routing to Concept path for '{subject}'")
-        
-        # Generative Planning
-        plan = await planner.create_plan(query, intent_data)
-        
-        # execute
-        fetched_data = await fetcher.execute_plan(plan)
-        
-        # Deep Synthesis
-        deep_analysis = await summarizer.summarize_concept_deep_dive(subject, fetched_data)
-        
-        # Extract news and social
-        social = next((item.data for item in fetched_data if item.source == "social_sentiment"), None)
-        news = next((item.data for item in fetched_data if item.source == "news"), {"headlines": []})
+        if not response:
+            logger.info(f"API: Routing to Concept path for '{subject}'")
+            
+            # Generative Planning
+            plan = await planner.create_plan(query, intent_data)
+            
+            # execute
+            fetched_data = await fetcher.execute_plan(plan)
+            
+            # Deep Synthesis
+            deep_analysis = await summarizer.summarize_concept_deep_dive(subject, fetched_data)
+            
+            # Extract news and social
+            social = next((item.data for item in fetched_data if item.source == "social_sentiment"), None)
+            news = next((item.data for item in fetched_data if item.source == "news"), {"headlines": []})
 
-        return UnifiedResponse(
-            query=query,
-            type="concept",
-            research_plan=plan.subtasks,
-            content=deep_analysis.get("explanation"), 
-            chat_summary=deep_analysis.get("chat_summary"),
-            chart_data=None,
-            insights=deep_analysis.get("insights", []), 
-            concept_kpis=deep_analysis.get("concept_kpis", []),
-            deep_dive=deep_analysis.get("deep_dive", []), # Detailed technical sections
-            social_sentiment=social,
-            news_headlines=news.get("headlines", []),
-            source_url=deep_analysis.get("source_url"),
-            asset=None,
-            is_error=False
-        )
+            response = UnifiedResponse(
+                query=query,
+                type="concept",
+                research_plan=plan.subtasks,
+                content=deep_analysis.get("explanation"), 
+                chat_summary=deep_analysis.get("chat_summary"),
+                chart_data=None,
+                insights=deep_analysis.get("insights", []), 
+                concept_kpis=deep_analysis.get("concept_kpis", []),
+                deep_dive=deep_analysis.get("deep_dive", []), # Detailed technical sections
+                social_sentiment=social,
+                news_headlines=news.get("headlines", []),
+                source_url=deep_analysis.get("source_url"),
+                asset=None,
+                is_error=False
+            )
+            
+        # --- CACHING STORE ---
+        if response and redis_client:
+            try:
+                # Cache for 10 minutes (600 seconds)
+                await redis_client.set(cache_key, response.model_dump_json(), ex=600)
+                logger.info(f"Cache SET for query: {query}")
+            except Exception as e:
+                logger.error(f"Redis Set Error: {e}")
+                
+        return response
 
     except Exception as e:
         logger.error(f"API Error: {str(e)}", exc_info=True)

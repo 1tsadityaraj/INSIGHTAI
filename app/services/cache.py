@@ -1,35 +1,12 @@
 
-import redis.asyncio as redis
 from typing import Optional, Any
-from app.core.config import get_settings
+from app.core.redis_client import redis_client
 from app.utils.logger import logger
 import json
 
-settings = get_settings()
-
 class CacheService:
-    _instance = None
-    _redis_client = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(CacheService, cls).__new__(cls)
-            cls._instance._init_redis()
-        return cls._instance
-
-    def _init_redis(self):
-        if self._redis_client:
-            return
-        try:
-            self._redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
-            logger.info(f"Redis configured at {settings.REDIS_URL}")
-        except Exception as e:
-            logger.error(f"Failed to configure Redis: {e}")
-            self._redis_client = None
-
-    @property
-    def redis(self):
-        return self._redis_client
+    def __init__(self):
+        self.redis = redis_client
 
     async def get(self, key: str) -> Optional[Any]:
         if not self.redis:
@@ -50,7 +27,15 @@ class CacheService:
         if not self.redis:
             return False
         try:
-            await self.redis.set(key, json.dumps(value), ex=ttl)
+            # Handle Pydantic models automatically
+            if hasattr(value, 'model_dump'):
+                payload = value.model_dump_json()
+            elif hasattr(value, 'dict'):
+                payload = json.dumps(value.dict())
+            else:
+                payload = json.dumps(value)
+                
+            await self.redis.set(key, payload, ex=ttl)
             return True
         except Exception as e:
             logger.error(f"Redis SET Error ({key}): {e}")
