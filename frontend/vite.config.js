@@ -9,10 +9,15 @@ export default defineConfig({
     hmr: {
       // Configure HMR to handle connection failures gracefully
       clientPort: 5173,
-      // Disable error overlay for HMR connection issues
-      overlay: false,
+      // Show overlay only for real errors, not connection issues
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
       // Reduce protocol errors by using a more stable connection
       protocol: 'ws',
+      // Add timeout to prevent hanging connections
+      timeout: 30000,
     },
     // Prevent MIME type errors
     fs: {
