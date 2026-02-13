@@ -28,7 +28,7 @@ const ChatInput = ({ onSend, isLoading }) => {
     return (
         <form
             onSubmit={handleSubmit}
-            className="border-t border-gray-200 bg-white p-4 sticky bottom-0"
+            className="p-4"
         >
             <div className="max-w-3xl mx-auto relative flex items-center">
                 <input
@@ -36,16 +36,16 @@ const ChatInput = ({ onSend, isLoading }) => {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask InsightAI anything (e.g., 'Analyze Bitcoin trends')..."
+                    placeholder="Ask InsightAI anything..."
                     disabled={isLoading}
-                    className="w-full bg-gray-100 border-0 rounded-full py-4 pl-6 pr-14 focus:ring-2 focus:ring-secondary focus:outline-none shadow-sm text-gray-800 placeholder-gray-500"
+                    className="w-full bg-base border border-border rounded-[14px] py-3 pl-6 pr-14 focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:outline-none shadow-sm text-ink placeholder-ink-dim/40 transition-all duration-200"
                 />
                 <button
                     type="submit"
                     disabled={!query.trim() || isLoading}
-                    className={`absolute right-2 p-2 rounded-full transition-colors ${query.trim() && !isLoading
-                            ? "bg-secondary text-white hover:bg-blue-600"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    className={`absolute right-3 p-2 rounded-lg transition-all ${query.trim() && !isLoading
+                        ? "text-primary hover:bg-primary/10"
+                        : "text-ink-dim/30 cursor-not-allowed"
                         }`}
                 >
                     {isLoading ? (
@@ -55,8 +55,8 @@ const ChatInput = ({ onSend, isLoading }) => {
                     )}
                 </button>
             </div>
-            <p className="text-xs text-center text-gray-400 mt-2">
-                InsightAI can make mistakes. Consider checking important information.
+            <p className="text-[10px] text-center text-ink-dim/50 mt-3 font-normal uppercase tracking-wider">
+                InsightAI · Deep Analysis Protocol active
             </p>
         </form>
     );

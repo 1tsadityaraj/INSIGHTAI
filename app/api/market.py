@@ -8,7 +8,7 @@ router = APIRouter()
 market_service = MarketService()
 
 @router.get("/market/{coin_id}")
-@limiter.limit("20/minute") # Strict limit for free Tier
+@limiter.limit("40/minute") # Increased for better DX
 async def get_market_data(
     request: Request,
     coin_id: str, 
@@ -67,7 +67,7 @@ async def compare_markets(
     return await market_service.get_comparison_data(symbol_list, range, background_tasks)
 
 @router.get("/heatmap")
-@limiter.limit("10/minute")
+@limiter.limit("30/minute") # Increased for better DX
 async def market_heatmap(
     request: Request,
     limit: int = Query(10, le=50),

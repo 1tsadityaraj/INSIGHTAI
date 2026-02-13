@@ -1,96 +1,93 @@
 import React from "react";
 import { Activity, ArrowUp, ArrowDown, TrendingUp, Zap, BarChart2 } from "lucide-react";
-
-const getScoreColor = (score) => {
-    if (score >= 75) return "text-green-600 bg-green-100";
-    if (score >= 60) return "text-green-500 bg-green-50";
-    if (score <= 25) return "text-red-600 bg-red-100";
-    if (score <= 40) return "text-red-500 bg-red-50";
-    return "text-gray-600 bg-gray-100";
-};
+import { UI_CONFIG, getHealthColor, getHealthStatus } from "../config/ui-config";
 
 const MarketHealthPanel = ({ scoreData }) => {
     if (!scoreData || !scoreData.components) return null;
 
-    const { score, status, components } = scoreData;
-    const colorClass = getScoreColor(score);
+    const { score, components } = scoreData;
+    const healthColor = getHealthColor(score);
+    const status = getHealthStatus(score);
     const isBull = score >= 50;
 
     return (
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-full flex flex-col justify-between">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Activity className="w-4 h-4" /> Market Health
+        <div className={UI_CONFIG.card.base}>
+            <h3 className={`${UI_CONFIG.typography.cardTitle} flex items-center gap-2 mb-3`}>
+                <Activity className="w-4 h-4 text-primary" /> Market Health
             </h3>
 
-            {/* Main Score Gauge */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="relative w-24 h-24 flex items-center justify-center">
+            {/* Main Score Gauge - Refined */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="relative w-20 h-20 flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90">
+                        {/* Background circle */}
                         <circle
-                            cx="48"
-                            cy="48"
-                            r="40"
+                            cx="40"
+                            cy="40"
+                            r="34"
                             stroke="currentColor"
-                            strokeWidth="8"
+                            strokeWidth="6"
                             fill="transparent"
-                            className="text-gray-100"
+                            className="text-border"
                         />
+                        {/* Gradient definition */}
+                        <defs>
+                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor={isBull ? "#22C55E" : "#EF4444"} />
+                                <stop offset="100%" stopColor={isBull ? "#4ADE80" : "#F87171"} />
+                            </linearGradient>
+                        </defs>
+                        {/* Progress circle with radial glow */}
                         <circle
-                            cx="48"
-                            cy="48"
-                            r="40"
-                            stroke="currentColor"
-                            strokeWidth="8"
+                            cx="40"
+                            cy="40"
+                            r="34"
+                            stroke="url(#gaugeGradient)"
+                            strokeWidth="6"
                             fill="transparent"
-                            strokeDasharray={251.2}
-                            strokeDashoffset={251.2 - (251.2 * score) / 100}
-                            className={`${isBull ? "text-green-500" : "text-red-500"} transition-all duration-1000 ease-out`}
+                            strokeDasharray={213.6}
+                            strokeDashoffset={213.6 - (213.6 * score) / 100}
+                            style={{ filter: `drop-shadow(${healthColor.shadow})` }}
+                            className="transition-all duration-1000 ease-out"
+                            strokeLinecap="round"
                         />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className={`text-2xl font-bold ${isBull ? "text-green-600" : "text-red-600"}`}>{score}</span>
-                        <span className="text-[10px] text-gray-400 uppercase">Score</span>
+                        <span className={`text-xl font-bold ${healthColor.text} tracking-tighter`}>{score}</span>
+                        <span className="text-[8px] text-ink-muted uppercase tracking-[0.15em] font-semibold">Score</span>
                     </div>
                 </div>
 
                 <div className="text-right">
-                    <div className={`text-lg font-bold ${isBull ? "text-green-600" : "text-red-600"}`}>{status}</div>
-                    <p className="text-xs text-gray-400 mt-1">AI Composite metric</p>
+                    <div className={`text-sm font-bold ${healthColor.text} uppercase tracking-tight`}>{status}</div>
+                    <p className="text-[9px] text-ink-muted mt-0.5 uppercase tracking-[0.1em] font-medium">Deep Scan Composite</p>
                 </div>
             </div>
 
-            {/* Components Breakdown */}
-            <div className="space-y-2 mt-2">
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Momentum</span>
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500" style={{ width: `${(components.heatmap || 0) * 5}%` }}></div>
+            {/* Components Breakdown - Premium Progress Bars */}
+            <div className="space-y-2 mt-4">
+                {[
+                    { label: "Momentum", val: components.heatmap, icon: TrendingUp, color: "bg-blue-500" },
+                    { label: "RSI Health", val: components.rsi, icon: Activity, color: "bg-accent" },
+                    { label: "MACD Signal", val: components.macd, icon: BarChart2, color: "bg-warning" },
+                    { label: "Volatility", val: components.volatility, icon: Activity, color: "bg-pink-500" },
+                    { label: "Sentiment", val: components.sentiment, icon: Zap, color: "bg-yellow-500" }
+                ].map((comp, idx) => (
+                    <div key={idx} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-ink-dim flex items-center gap-1.5 uppercase tracking-wider font-semibold">
+                                <comp.icon className="w-2.5 h-2.5 opacity-70" /> {comp.label}
+                            </span>
+                            <span className="text-ink font-bold">{(comp.val || 0).toFixed(1)}</span>
+                        </div>
+                        <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full ${comp.color} transition-all duration-500 ease-out rounded-full`}
+                                style={{ width: `${(comp.val || 0) * 10}%` }}
+                            ></div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 flex items-center gap-1"><Activity className="w-3 h-3" /> RSI Health</span>
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500" style={{ width: `${(components.rsi || 0) * 5}%` }}></div>
-                    </div>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 flex items-center gap-1"><BarChart2 className="w-3 h-3" /> MACD Signal</span>
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-orange-500" style={{ width: `${(components.macd || 0) * 5}%` }}></div>
-                    </div>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 flex items-center gap-1"><Activity className="w-3 h-3" /> Volatility</span>
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-pink-500" style={{ width: `${(components.volatility || 0) * 5}%` }}></div>
-                    </div>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 flex items-center gap-1"><Zap className="w-3 h-3" /> Sentiment</span>
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-yellow-500" style={{ width: `${(components.sentiment || 0) * 5}%` }}></div>
-                    </div>
-                </div>
+                ))}
             </div>
         </div>
     );

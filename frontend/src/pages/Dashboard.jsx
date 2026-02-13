@@ -8,16 +8,19 @@ import MarketHealthPanel from "../components/MarketHealthPanel"; // New (Replace
 import HeatmapGrid from "../components/HeatmapGrid";
 import PriceAlerts from "../components/PriceAlerts";
 import Portfolio from "../components/Portfolio"; // New
+import ThemeToggle from "../components/ThemeToggle"; // Dark Mode Toggle
 import { api } from "../services/api";
 import FloatingStatusBubble from "../components/FloatingStatusBubble";
 import FloatingActionButton from "../components/FloatingActionButton";
 import { market } from "../services/market";
-import { Sparkles, TrendingUp, DollarSign, Activity, Star, BarChart2, Zap, LayoutDashboard, PieChart } from "lucide-react";
+import { Sparkles, TrendingUp, DollarSign, Activity, Star, BarChart2, Zap, LayoutDashboard, PieChart, Bell } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import useCryptoWebSocket from "../hooks/useCryptoWebSocket"; // New Hook
+import { useTheme } from "../context/ThemeContext";
 
 const Dashboard = () => {
+    const { theme } = useTheme();
     // console.log("Dashboard.jsx: Rendering...");
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -248,8 +251,8 @@ const Dashboard = () => {
     const { kpi, chart, loading, error } = marketData;
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden" data-testid="dashboard-root">
-            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+        <div className="flex h-screen bg-base overflow-hidden animate-premium-fade" data-testid="dashboard-root">
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme={theme} />
 
             {/* Left Panel: Analytics (65%) */}
             <div className="w-[65%] flex flex-col p-6 space-y-6 overflow-y-auto">
@@ -260,20 +263,25 @@ const Dashboard = () => {
                             <span>InsightAI Analytics</span>
                         </div>
 
-                        {/* Tab Switcher */}
-                        <div className="flex bg-gray-200 p-1 rounded-lg">
-                            <button
-                                onClick={() => setActiveTab("analytics")}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition ${activeTab === 'analytics' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                <LayoutDashboard className="w-4 h-4" /> Market
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("portfolio")}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition ${activeTab === 'portfolio' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                <PieChart className="w-4 h-4" /> Portfolio
-                            </button>
+                        {/* Theme Toggle & Tab Switcher */}
+                        <div className="flex items-center gap-3">
+                            <ThemeToggle />
+
+                            {/* Tab Switcher */}
+                            <div className="flex bg-border p-1 rounded-xl shadow-inner">
+                                <button
+                                    onClick={() => setActiveTab("analytics")}
+                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${activeTab === 'analytics' ? 'bg-surface text-primary shadow-sm ring-1 ring-border' : 'text-ink-muted hover:text-ink'}`}
+                                >
+                                    <LayoutDashboard className="w-3.5 h-3.5" /> Market
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab("portfolio")}
+                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${activeTab === 'portfolio' ? 'bg-surface text-primary shadow-sm ring-1 ring-border' : 'text-ink-muted hover:text-ink'}`}
+                                >
+                                    <PieChart className="w-4 h-4" /> Portfolio
+                                </button>
+                            </div>
                         </div>
 
                         {/* Price Alerts Widget - Only show in analytics */}
@@ -285,7 +293,7 @@ const Dashboard = () => {
                     {/* Watchlist Chips */}
                     {activeTab === 'analytics' && watchlist.length > 0 && (
                         <div className="flex flex-wrap gap-2 items-center">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Watchlist:</span>
+                            <span className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">Watchlist:</span>
                             {watchlist.map((asset) => (
                                 <button
                                     key={asset}
@@ -293,7 +301,7 @@ const Dashboard = () => {
                                         setActiveAssetId(asset);
                                         fetchMarketData(asset, range);
                                     }}
-                                    className={`text-xs px-2 py-1 rounded-md border transition-all ${activeAssetId === asset ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary/50'}`}
+                                    className={`text-xs px-2 py-1 rounded-md border transition-all ${activeAssetId === asset ? 'bg-primary text-white border-primary shadow-[0_2px_8px_rgba(59,130,246,0.3)]' : 'bg-surface text-ink-dim border-border hover:border-primary/50'}`}
                                 >
                                     {asset}
                                 </button>
@@ -337,19 +345,19 @@ const Dashboard = () => {
 
                         {/* Main Content Area */}
                         <div className="flex-grow flex flex-col space-y-4">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="bg-surface rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-border overflow-hidden flex flex-col min-h-[500px]">
 
                                 {/* Toolbar / Controls */}
-                                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <div className="p-4 border-b border-border flex justify-between items-center bg-base/50 backdrop-blur-sm">
                                     <div className="flex items-center gap-3">
-                                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                                        <h3 className="font-semibold text-ink flex items-center gap-2 uppercase tracking-tight">
                                             {marketData.type === 'comparison' ? 'Performance Comparison' : `${kpi?.name || 'Asset'} Performance`}
                                             {marketData.type === 'market' && (
                                                 <button
                                                     onClick={handleExplainChart}
-                                                    className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-purple-200 transition"
+                                                    className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors font-bold uppercase tracking-wider"
                                                 >
-                                                    <Zap className="w-3 h-3" /> AI Explain
+                                                    <Zap className="w-2.5 h-2.5" /> AI Explain
                                                 </button>
                                             )}
                                         </h3>
@@ -371,19 +379,19 @@ const Dashboard = () => {
                                         {/* Comparison Toggle */}
                                         <button
                                             onClick={toggleComparisonMode}
-                                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1 transition-all ${comparisonMode ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                                            className={`text-xs px-3 py-1.5 rounded-lg border font-bold flex items-center gap-1 transition-all ${comparisonMode ? 'bg-primary/10 text-primary border-primary/20' : 'bg-surface text-ink-dim border-border hover:border-primary/50'}`}
                                         >
                                             <BarChart2 className="w-3 h-3" />
                                             {comparisonMode ? 'Exit Compare' : 'Compare'}
                                         </button>
 
                                         {/* Range Selector */}
-                                        <div className="flex bg-gray-100 rounded-lg p-1">
+                                        <div className="flex bg-border/50 p-1 rounded-lg">
                                             {["7", "30", "90", "365"].map((d) => (
                                                 <button
                                                     key={d}
                                                     onClick={() => handleRangeChange(d)}
-                                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${range === d ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${range === d ? 'bg-surface text-primary shadow-sm' : 'text-ink-dim hover:text-ink'}`}
                                                 >
                                                     {d}D
                                                 </button>
@@ -394,22 +402,22 @@ const Dashboard = () => {
 
                                 {loading ? (
                                     <div className="flex-grow p-12 space-y-6 animate-pulse">
-                                        <div className="h-4 bg-gray-50 rounded w-full"></div>
-                                        <div className="flex-grow bg-gray-50 rounded-lg"></div>
+                                        <div className="h-4 bg-border rounded w-full"></div>
+                                        <div className="flex-grow bg-border/50 rounded-xl"></div>
                                     </div>
                                 ) : error ? (
-                                    <div className="flex-grow flex items-center justify-center text-red-500">{error}</div>
+                                    <div className="flex-grow flex items-center justify-center text-error font-bold">{error}</div>
                                 ) : (
                                     <div className="flex-grow relative h-full w-full">
                                         {/* Explanation Overlay */}
                                         {marketData.explanation && (
-                                            <div className="absolute top-4 left-4 right-4 z-10 bg-purple-50/95 backdrop-blur border border-purple-100 p-4 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2">
+                                            <div className="absolute top-4 left-4 right-4 z-10 bg-surface/95 backdrop-blur-md border border-primary/20 p-4 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-2">
                                                 <div className="flex justify-between items-start">
-                                                    <div className="flex gap-2">
-                                                        <Sparkles className="w-5 h-5 text-purple-600 mt-0.5" />
+                                                    <div className="flex gap-3">
+                                                        <Sparkles className="w-5 h-5 text-primary mt-0.5" />
                                                         <div>
-                                                            <h4 className="font-bold text-purple-900 text-sm">AI Analysis</h4>
-                                                            <p className="text-sm text-purple-800 leading-relaxed">{marketData.explanation}</p>
+                                                            <h4 className="font-bold text-ink text-sm uppercase tracking-tight">AI Protocol Analysis</h4>
+                                                            <p className="text-sm text-ink-dim leading-relaxed">{marketData.explanation}</p>
                                                         </div>
                                                     </div>
                                                     <button onClick={() => setMarketData(prev => ({ ...prev, explanation: null }))} className="text-purple-400 hover:text-purple-700"><span className="sr-only">Close</span>×</button>
@@ -445,18 +453,21 @@ const Dashboard = () => {
 
             </div>
 
-            {/* Right Panel: Chat (35%) */}
-            <div className="w-[35%] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
-                <div className="p-4 border-b border-gray-100 bg-gray-50">
-                    <h2 className="font-semibold text-gray-700">AI Assistant</h2>
-                    <p className="text-xs text-gray-400">Ask about market trends & analysis</p>
+            {/* Right Panel: Chat (Institutional Sidebar) */}
+            <div className="relative w-[35%] bg-gradient-to-b from-chat-from via-chat-from to-chat-to border-l border-border flex flex-col shadow-2xl z-20 transition-all duration-300">
+                {/* AI Grid Overlay */}
+                <div className="absolute inset-0 bg-ai-grid opacity-20 pointer-events-none"></div>
+
+                <div className="relative p-5 border-b border-border bg-surface/[0.03] backdrop-blur-xl">
+                    <h2 className="font-bold text-ink uppercase tracking-tight text-xs">AI Analysis Protocol</h2>
+                    <p className="text-[10px] text-ink-muted uppercase tracking-[0.12em] font-bold opacity-70">Deep Scanning Systems Active</p>
                 </div>
 
                 <div className="flex-grow overflow-y-auto scroll-smooth p-4 space-y-4">
                     {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
                             <Sparkles className="w-12 h-12 text-primary" />
-                            <p className="text-sm">Ask "Show me Ethereum chart" or "Analyze Bitcoin trends"</p>
+                            <p className="text-sm text-ink-dim font-normal">Ask "Show me Ethereum chart" or "Analyze Bitcoin trends"</p>
                         </div>
                     ) : (
                         messages.map((msg, idx) => (
@@ -466,7 +477,7 @@ const Dashboard = () => {
                     <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 bg-white border-t border-gray-100">
+                <div className="p-4 bg-transparent border-t border-border">
                     <ChatInput onSend={handleSend} isLoading={isLoading} />
                 </div>
             </div>

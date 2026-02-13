@@ -1,24 +1,119 @@
 @import "tailwindcss";
+@config "../tailwind.config.js";
+@variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #10B981;
-  --color-secondary: #3B82F6;
-  --color-background: #F9FAFB;
+  --color-primary: #3B82F6;
+  --color-success: #00E676;
+  /* Higher saturation for dark mode */
+  --color-error: #FF4D4F;
+  /* Higher saturation for dark mode */
+  --color-warning: #F97316;
+  --color-accent: #A855F7;
+
+  /* Design System Tokens - Light Mode */
+  --color-base: #F8FAFC;
   --color-surface: #FFFFFF;
+  --color-surface-elevated: #F1F5F9;
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
+  --color-ink: #0B1220;
+  --color-ink-dim: #64748B;
+  --color-ink-muted: #94A3B8;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Chat Panel Gradient */
+  --color-chat-from: #F1F5F9;
+  --color-chat-to: #E2E8F0;
 }
 
-body {
-  background-color: var(--color-background);
-  color: rgb(17 24 39);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  .dark {
+    /* "Elite SaaS" Dark Design System */
+    --color-base: #0B1220;
+    --color-surface: #111827;
+    --color-surface-elevated: #161F2F;
+    --color-surface-top: #0F1B2D;
+    /* Deeper tone for charts */
+
+    --color-border: rgba(255, 255, 255, 0.06);
+    --color-border-strong: rgba(255, 255, 255, 0.12);
+
+    --color-ink: #E6EDF3;
+    --color-ink-dim: #9CA3AF;
+    --color-ink-muted: #6B7280;
+
+    --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.55);
+    /* Glass Fintech Inner Glow */
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    --color-chat-from: #0B1422;
+    --color-chat-to: #0A1220;
+  }
+
+  body {
+    background-color: var(--color-base);
+    color: var(--color-ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
 }
+
+/* Premium Entry Animation */
+@keyframes premiumFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-premium-fade {
+  animation: premiumFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* AI System Grid Overlay */
+.bg-ai-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Luxury Transitions & Hierarchy */
+* {
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.25s ease, box-shadow 0.3s ease;
+}
+
+.card-luxury {
+  box-shadow: var(--shadow-soft), var(--shadow-inset);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card-luxury:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+}
+
 
 /* Custom Floating Animations */
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .animate-float {
@@ -26,11 +121,58 @@ body {
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
+
 
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
+}
+
+/* Ripple Effect for Buttons */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+
+.animate-ripple {
+  animation: ripple 600ms ease-out;
+}
+
+/* Float Animation for Empty State Icons */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }

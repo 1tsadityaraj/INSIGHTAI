@@ -1,9 +1,18 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useTheme } from '../context/ThemeContext';
+import { UI_CONFIG } from '../config/ui-config';
 
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300"];
+const COLORS = ["#60A5FA", "#82ca9d", "#ffc658", "#ff7300"];
 
 const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage = false }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+    const isTradingViewDark = isDark; // For semantic clarity
+    const gridColor = isTradingViewDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const tickColor = isTradingViewDark ? '#9CA3AF' : '#6B7280';
+    const tooltipBg = isTradingViewDark ? '#1F2937' : '#FFFFFF';
+    const tooltipBorder = isTradingViewDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
     const [showSMA, setShowSMA] = React.useState(true);
     const [showEMA, setShowEMA] = React.useState(true);
     const [showRSI, setShowRSI] = React.useState(true);
@@ -41,8 +50,8 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
 
     if (chartData.length === 0) {
         return (
-            <div className="h-full flex items-center justify-center text-gray-400 bg-gray-50 rounded-xl border border-gray-100 p-10">
-                No chart data available
+            <div className="h-full flex items-center justify-center text-ink-dim bg-surface rounded-2xl border border-border p-10 font-bold uppercase tracking-widest">
+                No Protocol Data Available
             </div>
         );
     }
@@ -50,44 +59,44 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
     const isComparison = comparisonData && comparisonData.length > 0;
 
     return (
-        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-full flex flex-col w-full">
+        <div className="bg-surface-top border border-border card-luxury rounded-2xl h-full flex flex-col w-full p-6 transition-all duration-300">
             <div className="mb-6 flex flex-wrap justify-between items-end gap-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        {isComparison ? "Market Comparison" : `${coinName} Price Trend`}
+                    <h3 className="text-[17px] font-bold text-ink uppercase tracking-tight">
+                        {isComparison ? "Market Comparison Protocol" : `${coinName} Precision Trend`}
                     </h3>
-                    <p className="text-sm text-gray-500">Last {days} days history</p>
+                    <p className="text-[10px] text-ink-muted/80 uppercase tracking-[0.15em] font-semibold mt-1">Institutional scan: {days}D window</p>
                 </div>
 
                 {/* Indicator Toggles */}
                 {!isComparison && (
                     <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
+                        <label className="flex items-center space-x-2 text-sm text-ink-dim cursor-pointer hover:text-ink transition-colors">
                             <input
                                 type="checkbox"
                                 checked={showSMA}
                                 onChange={(e) => setShowSMA(e.target.checked)}
-                                className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                className="rounded border-border bg-surface text-orange-500 focus:ring-orange-500"
                             />
-                            <span className="text-orange-600 font-medium">SMA (20)</span>
+                            <span className="text-[#F97316] font-medium">SMA (20)</span>
                         </label>
-                        <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
+                        <label className="flex items-center space-x-2 text-sm text-ink-dim cursor-pointer hover:text-ink transition-colors">
                             <input
                                 type="checkbox"
                                 checked={showEMA}
                                 onChange={(e) => setShowEMA(e.target.checked)}
-                                className="rounded border-gray-300 text-fuchsia-500 focus:ring-fuchsia-500"
+                                className="rounded border-border bg-surface text-purple-500 focus:ring-purple-500"
                             />
-                            <span className="text-fuchsia-600 font-medium">EMA (20)</span>
+                            <span className="text-[#A855F7] font-medium">EMA (20)</span>
                         </label>
-                        <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
+                        <label className="flex items-center space-x-2 text-sm text-ink-dim cursor-pointer hover:text-ink transition-colors">
                             <input
                                 type="checkbox"
                                 checked={showRSI}
                                 onChange={(e) => setShowRSI(e.target.checked)}
-                                className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                className="rounded border-border bg-surface text-indigo-400 focus:ring-indigo-400"
                             />
-                            <span>RSI (14)</span>
+                            <span className="text-[#A78BFA] font-medium">RSI (14)</span>
                         </label>
                     </div>
                 )}
@@ -98,7 +107,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                 <ResponsiveContainer width="100%" height="100%">
                     {isComparison ? (
                         <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#1e293b' : '#f0f0f0'} />
                             <XAxis dataKey="date" hide={true} />
                             <YAxis
                                 domain={['auto', 'auto']}
@@ -106,7 +115,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                                 tickFormatter={(val) => isPercentage ? `${val.toFixed(2)}%` : `$${val.toLocaleString()}`}
                             />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                contentStyle={{ borderRadius: '8px', border: isDark ? '1px solid #334155' : 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: isDark ? '#1f2937' : '#fff', color: isDark ? '#f8fafc' : '#111' }}
                                 formatter={(value, name) => {
                                     const formatted = isPercentage ? `${value?.toFixed(2)}%` : `$${value?.toLocaleString()}`;
                                     return [formatted, name];
@@ -115,7 +124,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                             <Legend />
 
                             {/* Base Asset */}
-                            <Line type="monotone" dataKey={coinName} stroke={COLORS[0]} strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey={coinName} stroke={COLORS[0]} strokeWidth={2.5} dot={false} />
 
                             {/* Comparison Assets */}
                             {comparisonData.map((comp, i) => (
@@ -124,7 +133,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                                     type="monotone"
                                     dataKey={comp.name}
                                     stroke={COLORS[(i + 1) % COLORS.length]}
-                                    strokeWidth={2}
+                                    strokeWidth={2.2}
                                     dot={false}
                                 />
                             ))}
@@ -133,16 +142,16 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                         <AreaChart data={chartData}>
                             <defs>
                                 <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={COLORS[0]} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={COLORS[0]} stopOpacity={0} />
+                                    <stop offset="5%" stopColor={COLORS[0]} stopOpacity={0.15} />
+                                    <stop offset="95%" stopColor={COLORS[0]} stopOpacity={0.01} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} opacity={0.4} />
                             <XAxis
                                 dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                tick={{ fill: tickColor, fontSize: 10, fontWeight: 500 }}
                                 minTickGap={30}
                                 hide={showRSI} // Hide X axis if RSI chart is below
                             />
@@ -150,12 +159,12 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                                 domain={['auto', 'auto']}
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                tick={{ fill: tickColor, fontSize: 10, fontWeight: 500 }}
                                 tickFormatter={(val) => isPercentage ? `${val.toFixed(2)}%` : `$${val.toLocaleString()}`}
-                                width={60}
+                                width={50}
                             />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                contentStyle={{ borderRadius: '12px', border: `1px solid ${tooltipBorder}`, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', backgroundColor: tooltipBg, color: isTradingViewDark ? '#F9FAFB' : '#111' }}
                                 formatter={(value, name) => {
                                     if (name === "sma") return [value?.toFixed(2), "SMA (20)"];
                                     if (name === "ema") return [value?.toFixed(2), "EMA (20)"];
@@ -169,28 +178,32 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                             <Area
                                 type="monotone"
                                 dataKey={coinName}
-                                stroke={COLORS[0]}
-                                strokeWidth={2}
+                                stroke="#79B6FF" // Lightened by 10% for Dark Mode
+                                strokeWidth={2.8}
                                 fillOpacity={1}
                                 fill="url(#colorPrice)"
+                                animationDuration={1200}
+                                isAnimationActive={true}
                             />
                             {showSMA && (
                                 <Area
                                     type="monotone"
                                     dataKey="sma"
-                                    stroke="#ff7300"
+                                    stroke="#FB923C" // Lightened Orange focal
                                     strokeWidth={2}
                                     fill="none"
                                     strokeDasharray="5 5"
+                                    opacity={0.9}
                                 />
                             )}
                             {showEMA && (
                                 <Area
                                     type="monotone"
                                     dataKey="ema"
-                                    stroke="#d946ef"
+                                    stroke="#C084FC" // Lightened Purple focal
                                     strokeWidth={2}
                                     fill="none"
+                                    opacity={0.9}
                                 />
                             )}
                         </AreaChart>
@@ -200,15 +213,15 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
 
             {/* RSI Sub-Chart */}
             {showRSI && !isComparison && (
-                <div className="w-full h-[100px] mt-4 pt-4 border-t border-gray-100">
+                <div className="w-full h-[100px] mt-4 pt-4 border-t border-border/30">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} opacity={0.3} />
                             <XAxis
                                 dataKey="date"
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 10 }}
+                                tick={{ fill: tickColor, fontSize: 9 }}
                                 minTickGap={30}
                             />
                             <YAxis
@@ -216,26 +229,23 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
                                 hide={false}
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 10 }}
+                                tick={{ fill: tickColor, fontSize: 9, fontWeight: 500 }}
                                 ticks={[30, 70]}
                                 width={30}
                             />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                contentStyle={{ borderRadius: '12px', border: `1px solid ${tooltipBorder}`, boxShadow: '0 8px 12px rgba(0,0,0,0.2)', backgroundColor: tooltipBg, color: isTradingViewDark ? '#F9FAFB' : '#111', fontSize: '10px' }}
                                 formatter={(value) => [value?.toFixed(1), "RSI"]}
                             />
-                            {/* Reference Lines */}
-                            <Line type="monotone" dataKey={() => 70} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} dot={false} activeDot={false} />
-                            <Line type="monotone" dataKey={() => 30} stroke="#22c55e" strokeDasharray="3 3" strokeWidth={1} dot={false} activeDot={false} />
-
                             {/* RSI Line */}
                             <Line
                                 type="monotone"
                                 dataKey="rsi"
-                                stroke="#8884d8"
-                                strokeWidth={2}
+                                stroke="#A78BFA"
+                                strokeWidth={1.8}
                                 dot={false}
                             />
+                            <rect y={30} width="100%" height={40} fill="rgba(167, 139, 250, 0.03)" />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
