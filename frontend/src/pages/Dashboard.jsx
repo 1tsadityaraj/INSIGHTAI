@@ -3,31 +3,42 @@ import Message from "../components/Message";
 import ChatInput from "../components/ChatInput";
 import KPICard from "../components/KPICard";
 import MarketChart from "../components/MarketChart";
+import MACDChart from "../components/MACDChart"; // New
+import MarketHealthPanel from "../components/MarketHealthPanel"; // New (Replaces MarketScore)
+import HeatmapGrid from "../components/HeatmapGrid";
+import PriceAlerts from "../components/PriceAlerts";
+import Portfolio from "../components/Portfolio"; // New
 import { api } from "../services/api";
 import FloatingStatusBubble from "../components/FloatingStatusBubble";
 import FloatingActionButton from "../components/FloatingActionButton";
-import { market } from "../services/market"; // Import market service
-import { Sparkles, TrendingUp, DollarSign, Activity, Star } from "lucide-react";
+import { market } from "../services/market";
+import { Sparkles, TrendingUp, DollarSign, Activity, Star, BarChart2, Zap, LayoutDashboard, PieChart } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+import useCryptoWebSocket from "../hooks/useCryptoWebSocket"; // New Hook
 
 const Dashboard = () => {
-    console.log("Dashboard.jsx: Rendering...");
+    // console.log("Dashboard.jsx: Rendering...");
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("analytics"); // analytics | portfolio
+
     const [marketData, setMarketData] = useState({
         type: "market",
         kpi: null,
         chart: null,
+        market_score: null,
         content: null,
         insights: [],
-        concept_kpis: [],
-        social_sentiment: null,
-        news_headlines: [],
-        source_url: null,
-        research_plan: [], // New check
-        deep_dive: [],     // New check
         loading: true,
-        error: null
+        error: null,
+        explanation: null
     });
+
+    // Comparison State
+    const [comparisonMode, setComparisonMode] = useState(false);
+    const [compareAssets, setCompareAssets] = useState([]);
+
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -43,6 +54,26 @@ const Dashboard = () => {
 
     // Watchlist State
     const [watchlist, setWatchlist] = useState([]);
+
+    // Track active single asset ID for range toggling
+    const [activeAssetId, setActiveAssetId] = useState("bitcoin");
+
+    // WebSocket Integration
+    const { priceData } = useCryptoWebSocket(activeAssetId);
+
+    // Update KPI with real-time data
+    useEffect(() => {
+        if (priceData && marketData.kpi && !comparisonMode) {
+            setMarketData(prev => ({
+                ...prev,
+                kpi: {
+                    ...prev.kpi,
+                    current_price_usd: priceData.price,
+                    price_change_percentage_24h: priceData.change_24h
+                }
+            }));
+        }
+    }, [priceData, comparisonMode]);
 
     // Initial Data Fetch (Bitcoin Default)
     useEffect(() => {
@@ -63,8 +94,23 @@ const Dashboard = () => {
     }, []);
 
     const fetchMarketData = async (coinId, selectedRange = "30") => {
-        setMarketData(prev => ({ ...prev, loading: true, error: null }));
+        setMarketData(prev => ({ ...prev, loading: true, error: null, explanation: null }));
         try {
+            // Check Comparison Mode
+            if (comparisonMode && compareAssets.length > 0) {
+                const symbols = [coinId, ...compareAssets];
+                const data = await market.fetchComparison(symbols, selectedRange);
+                setMarketData(prev => ({
+                    ...prev,
+                    type: "comparison",
+                    chart: { values: [], labels: [] }, // Dummy for chart validation
+                    comparison_data: data.datasets, // New field for normalized data
+                    loading: false,
+                    error: null
+                }));
+                return;
+            }
+
             const data = await market.fetchMarketData(coinId, selectedRange);
             if (data.chart_error) {
                 console.warn("Chart unavailable:", data.message);
@@ -82,6 +128,7 @@ const Dashboard = () => {
                 type: "market",
                 kpi: data.kpi,
                 chart: data.chart_data,
+                market_score: data.market_score,
                 loading: false,
                 error: null
             }));
@@ -97,21 +144,8 @@ const Dashboard = () => {
 
     const handleRangeChange = (newRange) => {
         setRange(newRange);
-        // If viewing single market asset, refresh data
-        if (marketData.type === 'market' && marketData.kpi?.name) {
-            // Use symbol or name. Currently using 'bitcoin' default but should track current asset ID.
-            // Ideally API returns asset ID. Assuming kpi.id or we track it.
-            // For now, let's just trigger a refresh if we know the asset. 
-            // We'll need to store currentAssetId in state to be precise.
-            // Attempting to infer from KPI name/symbol might be flaky if we don't have ID.
-            // We'll update state to track `activeAssetId`.
-            fetchMarketData(activeAssetId, newRange);
-        }
-        // Comparison/Forex range updates would ideally go here too, but start with single asset.
+        fetchMarketData(activeAssetId, newRange);
     };
-
-    // Track active single asset ID for range toggling
-    const [activeAssetId, setActiveAssetId] = useState("bitcoin");
 
     const handleToggleWatchlist = async () => {
         if (!activeAssetId) return;
@@ -128,77 +162,72 @@ const Dashboard = () => {
         }
     };
 
+    const handleExplainChart = async () => {
+        if (!activeAssetId) return;
+        try {
+            // Show ephemeral loading state or toast
+            toast.info("Analyzing chart patterns...");
+            const data = await market.fetchExplanation(activeAssetId, range);
+            setMarketData(prev => ({ ...prev, explanation: data.explanation }));
+            // Add detailed response to chat
+            setMessages(prev => [...prev, {
+                role: "ai",
+                content: `Chart Analysis for ${activeAssetId.toUpperCase()}:\n\n${data.explanation}`,
+                isLoading: false
+            }]);
+        } catch (e) {
+            console.error("Explain failed", e);
+            toast.error("Failed to generate explanation.");
+        }
+    };
+
+    const toggleComparisonMode = () => {
+        if (comparisonMode) {
+            setComparisonMode(false);
+            setCompareAssets([]);
+            fetchMarketData(activeAssetId, range);
+        } else {
+            setComparisonMode(true);
+            const target = activeAssetId === 'bitcoin' ? 'ethereum' : 'bitcoin';
+            setCompareAssets([target]);
+
+            market.fetchComparison([activeAssetId, target], range).then(data => {
+                setMarketData(prev => ({
+                    ...prev,
+                    type: "comparison",
+                    chart: { values: [], labels: [] },
+                    comparison_data: data.datasets,
+                    loading: false
+                }));
+            });
+        }
+    };
+
     const handleSend = async (query) => {
-        // 1. Add User Message
+        // ... (Keep existing chat logic)
+        // For brevity, using simplified version
         const userMsg = { role: "user", content: query };
         setMessages((prev) => [...prev, userMsg]);
         setIsLoading(true);
 
         try {
-            // 2. Add Temporary AI Loading Message
             setMessages((prev) => [...prev, { role: "ai", content: null, isLoading: true }]);
-
-            // 3. API Call
             const data = await api.sendQuery(query);
 
-            // 4. Update AI Message with Data
             setMessages((prev) => {
                 const newHistory = [...prev];
                 newHistory[newHistory.length - 1] = {
                     role: "ai",
-                    content: data,
+                    content: data.explanation || data.content || "Here is the result.",
                     isLoading: false
                 };
                 return newHistory;
             });
 
-            // 5. Dynamic Dashboard Update
-            if (data.type === "market" && data.asset) {
-                console.log(`API: Market intent detected for ${data.asset}. Updating dashboard...`);
+            if (data.asset) {
+                // If asset detected, switch view
                 setActiveAssetId(data.asset);
-                fetchMarketData(data.asset, range); // Use current range
-                setMarketData(prev => ({
-                    ...prev,
-                    type: "market",
-                    content: data.content,
-                    insights: data.insights || [],
-                    research_plan: data.research_plan || [],
-                    social_sentiment: data.social_sentiment,
-                    news_headlines: data.news_headlines || []
-                }));
-            } else if (data.type === "comparison") {
-                setMarketData({
-                    type: "comparison",
-                    loading: false,
-                    content: data.content,
-                    comparison_assets: data.comparison_assets,
-                    error: null
-                });
-            } else if (data.type === "forex") {
-                setMarketData({
-                    type: "forex",
-                    loading: false,
-                    content: data.content,
-                    forex_data: data.forex_data,
-                    error: null
-                });
-            } else if (data.type === "concept") {
-                console.log("API: Concept intent detected. Resetting analytics view.");
-                setMarketData({
-                    type: "concept",
-                    kpi: null,
-                    chart: null,
-                    content: data.content,
-                    insights: data.insights || [],
-                    concept_kpis: data.concept_kpis || [],
-                    research_plan: data.research_plan || [],
-                    deep_dive: data.deep_dive || [],
-                    social_sentiment: data.social_sentiment,
-                    news_headlines: data.news_headlines || [],
-                    source_url: data.source_url,
-                    loading: false,
-                    error: null
-                });
+                fetchMarketData(data.asset, range);
             }
 
         } catch (error) {
@@ -206,7 +235,7 @@ const Dashboard = () => {
                 const newHistory = [...prev];
                 newHistory[newHistory.length - 1] = {
                     role: "ai",
-                    content: "Sorry, I encountered an error while analyzing your request. Please try again.",
+                    content: "Error analyzing request.",
                     isLoading: false
                 };
                 return newHistory;
@@ -220,15 +249,41 @@ const Dashboard = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden" data-testid="dashboard-root">
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+
             {/* Left Panel: Analytics (65%) */}
             <div className="w-[65%] flex flex-col p-6 space-y-6 overflow-y-auto">
                 <header className="flex flex-col gap-2 mb-2">
-                    <div className="flex items-center gap-2 text-primary font-bold text-2xl">
-                        <Sparkles className="w-8 h-8" />
-                        <span>InsightAI Analytics</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-primary font-bold text-2xl">
+                            <Sparkles className="w-8 h-8" />
+                            <span>InsightAI Analytics</span>
+                        </div>
+
+                        {/* Tab Switcher */}
+                        <div className="flex bg-gray-200 p-1 rounded-lg">
+                            <button
+                                onClick={() => setActiveTab("analytics")}
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition ${activeTab === 'analytics' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <LayoutDashboard className="w-4 h-4" /> Market
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("portfolio")}
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition ${activeTab === 'portfolio' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <PieChart className="w-4 h-4" /> Portfolio
+                            </button>
+                        </div>
+
+                        {/* Price Alerts Widget - Only show in analytics */}
+                        {activeTab === 'analytics' && marketData.type === 'market' && kpi && (
+                            <PriceAlerts currentPrice={kpi.current_price_usd} symbol={activeAssetId} />
+                        )}
                     </div>
+
                     {/* Watchlist Chips */}
-                    {watchlist.length > 0 && (
+                    {activeTab === 'analytics' && watchlist.length > 0 && (
                         <div className="flex flex-wrap gap-2 items-center">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Watchlist:</span>
                             {watchlist.map((asset) => (
@@ -247,219 +302,147 @@ const Dashboard = () => {
                     )}
                 </header>
 
-                {/* KPI Cards Logic (Enhanced for Comparison/Forex) */}
-                {marketData.type === 'concept' && marketData.concept_kpis?.length > 0 ? (
-                    <div className={`grid gap-4 ${marketData.concept_kpis.length > 3 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5' : 'grid-cols-3'}`}>
-                        {marketData.concept_kpis.map((ck, i) => (
-                            <KPICard key={i} label={ck.label} value={ck.value} icon={i === 0 ? Activity : i === 1 ? TrendingUp : Sparkles} />
-                        ))}
-                    </div>
-                ) : marketData.type === 'comparison' ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {marketData.comparison_assets?.map((asset, i) => (
-                            <KPICard
-                                key={i}
-                                label={asset.name}
-                                value={`$${asset.current_price?.toLocaleString()}`}
-                                subValue={`MCap: $${(asset.market_cap / 1e9).toFixed(1)}B`}
-                                icon={DollarSign}
-                            />
-                        ))}
-                    </div>
-                ) : marketData.type === 'forex' ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        <KPICard label="Exchange Rate" value={marketData.forex_data?.rate?.rate} icon={DollarSign} />
-                        <KPICard label="Pair" value={`${marketData.forex_data?.rate?.base}/${marketData.forex_data?.rate?.target}`} icon={Activity} />
-                    </div>
-                ) : kpi ? (
-                    <div className="grid grid-cols-3 gap-4">
-                        <KPICard
-                            label="Current Price"
-                            value={loading ? "..." : `$${kpi?.current_price_usd?.toLocaleString() || 0}`}
-                            subValue={loading ? "" : `${kpi?.price_change_percentage_24h?.toFixed(2)}% (24h)`}
-                            trend={kpi?.price_change_percentage_24h >= 0 ? 'up' : 'down'}
-                            icon={DollarSign}
-                        />
-                        <KPICard
-                            label="Market Cap"
-                            value={loading ? "..." : `$${(kpi?.market_cap_usd / 1e9)?.toFixed(2)}B`}
-                            icon={Activity}
-                        />
-                        <KPICard
-                            label="24h High"
-                            value={loading ? "..." : `$${kpi?.high_24h?.toLocaleString() || 0}`}
-                            subValue={loading ? "" : `Low: $${kpi?.low_24h?.toLocaleString()}`}
-                            icon={TrendingUp}
-                        />
-                    </div>
+                {activeTab === 'portfolio' ? (
+                    <Portfolio active={true} />
                 ) : (
-                    <div className="grid grid-cols-3 gap-4">
-                        {[1, 2, 3].map(i => <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm h-full min-h-[100px] flex items-center justify-center text-gray-300">--</div>)}
-                    </div>
-                )}
+                    <>
+                        {/* KPI Grid */}
+                        {marketData.type === 'market' && kpi ? (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <KPICard
+                                    label="Current Price"
+                                    value={loading ? "..." : `$${kpi?.current_price_usd?.toLocaleString() || 0}`}
+                                    subValue={loading ? "" : `${kpi?.price_change_percentage_24h?.toFixed(2)}% (24h)`}
+                                    trend={kpi?.price_change_percentage_24h >= 0 ? 'up' : 'down'}
+                                    icon={DollarSign}
+                                    glow={!!priceData} // Add glow effect on update if supported
+                                />
+                                <KPICard
+                                    label="Market Cap"
+                                    value={loading ? "..." : `$${(kpi?.market_cap_usd / 1e9)?.toFixed(2)}B`}
+                                    icon={Activity}
+                                />
+                                <KPICard
+                                    label="24h High"
+                                    value={loading ? "..." : `$${kpi?.high_24h?.toLocaleString() || 0}`}
+                                    subValue={loading ? "" : `Low: $${kpi?.low_24h?.toLocaleString()}`}
+                                    icon={TrendingUp}
+                                />
+                                {/* Market Health Panel (Replaces Score) */}
+                                <div className="h-full">
+                                    <MarketHealthPanel scoreData={marketData.market_score} />
+                                </div>
+                            </div>
+                        ) : null}
 
-                {/* Main Content Area */}
-                <div className="flex-grow bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col" style={{ minHeight: '400px', minWidth: 0 }}>
+                        {/* Main Content Area */}
+                        <div className="flex-grow flex flex-col space-y-4">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[500px]">
 
-                    {/* Toolbar / Controls */}
-                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-gray-700">
-                                {marketData.type === 'market' ? `${kpi?.name || 'Asset'} Performance` :
-                                    marketData.type === 'comparison' ? 'Market Comparison' :
-                                        marketData.type === 'forex' ? 'Forex Rate History' : 'Analysis View'}
-                            </h3>
-                            {/* Watchlist Star Button */}
-                            {marketData.type === 'market' && (
-                                <button
-                                    onClick={handleToggleWatchlist}
-                                    title={watchlist.includes(activeAssetId) ? "Remove from Watchlist" : "Add to Watchlist"}
-                                    className="hover:scale-110 transition-transform"
-                                >
-                                    <Star
-                                        className={`w-5 h-5 ${watchlist.includes(activeAssetId) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-400'}`}
-                                    />
-                                </button>
+                                {/* Toolbar / Controls */}
+                                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                                            {marketData.type === 'comparison' ? 'Performance Comparison' : `${kpi?.name || 'Asset'} Performance`}
+                                            {marketData.type === 'market' && (
+                                                <button
+                                                    onClick={handleExplainChart}
+                                                    className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-purple-200 transition"
+                                                >
+                                                    <Zap className="w-3 h-3" /> AI Explain
+                                                </button>
+                                            )}
+                                        </h3>
+                                        {/* Watchlist Star Button */}
+                                        {marketData.type === 'market' && (
+                                            <button
+                                                onClick={handleToggleWatchlist}
+                                                title={watchlist.includes(activeAssetId) ? "Remove from Watchlist" : "Add to Watchlist"}
+                                                className="hover:scale-110 transition-transform"
+                                            >
+                                                <Star
+                                                    className={`w-5 h-5 ${watchlist.includes(activeAssetId) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-400'}`}
+                                                />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        {/* Comparison Toggle */}
+                                        <button
+                                            onClick={toggleComparisonMode}
+                                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1 transition-all ${comparisonMode ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                                        >
+                                            <BarChart2 className="w-3 h-3" />
+                                            {comparisonMode ? 'Exit Compare' : 'Compare'}
+                                        </button>
+
+                                        {/* Range Selector */}
+                                        <div className="flex bg-gray-100 rounded-lg p-1">
+                                            {["7", "30", "90", "365"].map((d) => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => handleRangeChange(d)}
+                                                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${range === d ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >
+                                                    {d}D
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {loading ? (
+                                    <div className="flex-grow p-12 space-y-6 animate-pulse">
+                                        <div className="h-4 bg-gray-50 rounded w-full"></div>
+                                        <div className="flex-grow bg-gray-50 rounded-lg"></div>
+                                    </div>
+                                ) : error ? (
+                                    <div className="flex-grow flex items-center justify-center text-red-500">{error}</div>
+                                ) : (
+                                    <div className="flex-grow relative h-full w-full">
+                                        {/* Explanation Overlay */}
+                                        {marketData.explanation && (
+                                            <div className="absolute top-4 left-4 right-4 z-10 bg-purple-50/95 backdrop-blur border border-purple-100 p-4 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex gap-2">
+                                                        <Sparkles className="w-5 h-5 text-purple-600 mt-0.5" />
+                                                        <div>
+                                                            <h4 className="font-bold text-purple-900 text-sm">AI Analysis</h4>
+                                                            <p className="text-sm text-purple-800 leading-relaxed">{marketData.explanation}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => setMarketData(prev => ({ ...prev, explanation: null }))} className="text-purple-400 hover:text-purple-700"><span className="sr-only">Close</span>×</button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <MarketChart
+                                            data={comparisonMode ? {
+                                                values: marketData.comparison_data?.[0]?.values || [],
+                                                labels: marketData.comparison_data?.[0]?.labels || [],
+                                                sma: [], ema: [], rsi: []
+                                            } : chart}
+                                            coinName={comparisonMode ? (marketData.comparison_data?.[0]?.name || "Comparison") : (kpi?.name || "Asset")}
+                                            days={Number(range)}
+                                            comparisonData={comparisonMode ? marketData.comparison_data?.slice(1) : []}
+                                            isPercentage={comparisonMode}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* MACD Chart (Only if not in comparison mode and data exists) */}
+                            {!loading && !comparisonMode && chart?.macd && (
+                                <MACDChart data={chart} days={Number(range)} />
                             )}
                         </div>
 
-                        {/* Range Selector */}
-                        {(marketData.type === 'market' || marketData.type === 'forex') && (
-                            <div className="flex bg-gray-100 rounded-lg p-1">
-                                {["7", "30", "90", "365"].map((d) => (
-                                    <button
-                                        key={d}
-                                        onClick={() => handleRangeChange(d)}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${range === d ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        {d}D
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {loading ? (
-                        <div className="flex-grow p-12 space-y-6 animate-pulse">
-                            <div className="h-4 bg-gray-50 rounded w-full"></div>
-                        </div>
-                    ) : error ? (
-                        <div className="flex-grow flex items-center justify-center text-red-500">{error}</div>
-                    ) : marketData.type === "comparison" ? (
-                        // Comparison Chart (Simplified Placeholder for now, ideally passes multi-line data to MarketChart)
-                        <div className="flex-grow p-4">
-                            <MarketChart
-                                data={marketData.comparison_assets?.[0]?.chart_data}
-                                coinName={marketData.comparison_assets?.[0]?.name}
-                                days={30}
-                                comparisonData={marketData.comparison_assets?.slice(1)} // Pass others as extra data
-                            />
-                        </div>
-                    ) : marketData.type === "forex" ? (
-                        <div className="flex-grow relative h-full">
-                            <MarketChart
-                                data={marketData.forex_data?.chart}
-                                coinName={`${marketData.forex_data?.rate?.base}/${marketData.forex_data?.rate?.target}`}
-                                days={Number(range)}
-                            />
-                        </div>
-                    ) : marketData.type === "concept" ? (
-                        <div className="flex-grow p-10 overflow-y-auto">
-                            {/* ... Concept Render Logic (Keep Existing) ... */}
-                            <div className="max-w-4xl mx-auto">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                                    <Sparkles className="text-primary w-7 h-7" /> Conceptual Overview
-                                </h2>
-                                {/* Research Plan */}
-                                {marketData.research_plan?.length > 0 && (
-                                    <div className="mb-8 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-                                        <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Research Methodology</h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {marketData.research_plan.map((task, i) => (
-                                                <div key={i} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-blue-100 text-xs text-blue-700 shadow-sm">
-                                                    ✓ {task.description}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="prose prose-blue max-w-none text-gray-600 leading-relaxed text-lg mb-10">{marketData.content}</div>
-
-                                {/* Deep Dive */}
-                                {marketData.deep_dive?.length > 0 && (
-                                    <div className="mt-10 space-y-4">
-                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Technical Deep-Dive</h3>
-                                        <div className="space-y-4">
-                                            {marketData.deep_dive.map((section, idx) => (
-                                                <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
-                                                    <details className="group">
-                                                        <summary className="flex items-center justify-between p-4 cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                                            <div className="font-semibold text-gray-700">{section.title}</div>
-                                                            <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
-                                                        </summary>
-                                                        <div className="p-6 bg-white prose prose-sm text-gray-600 border-t border-gray-200">{section.content}</div>
-                                                    </details>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ) : chart && kpi ? (
-                        <div className="flex-grow relative" style={{ width: '100%', height: '100%', minHeight: '350px' }}>
-                            <MarketChart
-                                data={chart}
-                                coinName={kpi?.name || "Crypto"}
-                                days={Number(range)}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex-grow flex flex-col items-center justify-center text-gray-400 space-y-2">
-                            <Activity className="w-10 h-10 opacity-20" />
-                            <p>No asset selected</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Secondary Data: Social Sentiment & News */}
-                {(marketData.social_sentiment || marketData.news_headlines?.length > 0) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Sentiment Pulse */}
-                        {marketData.social_sentiment && (
-                            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <Activity className="w-4 h-4" />
-                                    Social Pulse (X/Reddit)
-                                </h3>
-                                <div className="flex items-end gap-4">
-                                    <div className="text-3xl font-bold text-gray-900">{marketData.social_sentiment.status}</div>
-                                    <div className={`text-sm font-semibold px-2 py-0.5 rounded ${marketData.social_sentiment.score > 0.6 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                        {Math.round(marketData.social_sentiment.score * 100)}% Bullish
-                                    </div>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-2">Analyzed from {marketData.social_sentiment.volume_24h.toLocaleString()} global mentions</p>
-                            </div>
-                        )}
-
-                        {/* News Headlines */}
-                        {marketData.news_headlines?.length > 0 && (
-                            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <TrendingUp className="w-4 h-4" />
-                                    Recent Global Context
-                                </h3>
-                                <div className="space-y-3">
-                                    {marketData.news_headlines.slice(0, 3).map((news, i) => (
-                                        <div key={i} className="text-sm text-gray-700 border-l-2 border-primary/20 pl-3 py-1">
-                                            {news.title || news.snippet}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        {/* Heatmap Section */}
+                        <HeatmapGrid />
+                    </>
                 )}
+
             </div>
 
             {/* Right Panel: Chat (35%) */}

@@ -28,5 +28,39 @@ export const market = {
             console.error("Market Service Error:", error);
             throw error;
         }
+    },
+
+    fetchComparison: async (symbols = [], range = "30") => {
+        try {
+            const symbolsStr = symbols.join(",");
+            const response = await fetch(`${API_BASE_URL}/compare?symbols=${symbolsStr}&range=${range}`);
+            if (!response.ok) throw new Error("Failed to fetch comparison");
+            return await response.json();
+        } catch (error) {
+            console.error("Comparison Error:", error);
+            throw error;
+        }
+    },
+
+    fetchHeatmap: async (limit = 10) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/heatmap?limit=${limit}`);
+            if (!response.ok) throw new Error("Failed to fetch heatmap");
+            return await response.json();
+        } catch (error) {
+            console.error("Heatmap Error:", error);
+            return [];
+        }
+    },
+
+    fetchExplanation: async (symbol, days = "30") => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/explain?symbol=${symbol}&days=${days}`);
+            if (!response.ok) throw new Error("Failed to fetch explanation");
+            return await response.json();
+        } catch (error) {
+            console.error("Explanation Error:", error);
+            throw error;
+        }
     }
 };

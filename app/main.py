@@ -10,7 +10,7 @@ from app.api.watchlist import router as watchlist_router
 from app.core.config import get_settings
 from app.utils.logger import logger
 from app.services.rate_limiter import limiter
-from app.services.scheduler import start_scheduler
+from app.core.scheduler import start_scheduler, scheduler
 
 settings = get_settings()
 
@@ -57,6 +57,8 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Shutting down application...")
+    if scheduler.running:
+        scheduler.shutdown()
     from app.core.redis_client import redis_manager
     await redis_manager.close()
 

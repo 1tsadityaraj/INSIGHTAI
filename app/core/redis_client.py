@@ -14,7 +14,13 @@ class RedisManager:
         self.client: redis.Redis = None
 
     def initialize(self):
+        import socket
         try:
+            # Simple check if Redis port is open
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)
+                s.connect(("localhost", 6379))
+                
             self.client = redis.from_url(
                 settings.REDIS_URL, 
                 decode_responses=True,
@@ -25,6 +31,10 @@ class RedisManager:
                 health_check_interval=30
             )
             logger.info(f"Redis Client initialized for {settings.REDIS_URL}")
+        except (socket.error, ConnectionRefusedError):
+            logger.warning("Redis Server not found on localhost:6379. Falling back to FakeRedis (In-Memory).")
+            from fakeredis import FakeAsyncRedis
+            self.client = FakeAsyncRedis(decode_responses=True)
         except Exception as e:
             logger.error(f"Failed to initialize Redis Client: {e}")
             self.client = None
