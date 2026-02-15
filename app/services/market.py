@@ -261,8 +261,14 @@ class MarketService:
         # 1. Heatmap Performance (0-20)
         # Avg of top 10 coins 24h change
         heatmap_score = 10
-        if heatmap_data:
-            changes = [h.get("change_24h", 0) for h in heatmap_data if h.get("change_24h") is not None]
+        
+        # Validate Heatmap Data (ensure it's a list, handle error dicts)
+        clean_heatmap = []
+        if isinstance(heatmap_data, list):
+            clean_heatmap = heatmap_data
+            
+        if clean_heatmap:
+            changes = [h.get("change_24h", 0) for h in clean_heatmap if isinstance(h, dict) and h.get("change_24h") is not None]
             if changes:
                 avg_change = sum(changes) / len(changes)
                 # Map -10% to 0, +10% to 20
