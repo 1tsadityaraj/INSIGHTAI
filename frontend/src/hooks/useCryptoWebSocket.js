@@ -10,8 +10,11 @@ const useCryptoWebSocket = (symbol) => {
         if (!symbol) return;
 
         const connect = () => {
-            const wsUrl = (import.meta.env && import.meta.env.VITE_WS_URL) || "ws://127.0.0.1:8000/api/v1/ws";
-            const url = `${wsUrl}/${symbol}`;
+            const PROD_WS = "wss://insightai-gchi.onrender.com/api/v1/ws";
+            const wsBase = import.meta.env.MODE === 'production'
+                ? PROD_WS
+                : "ws://127.0.0.1:8000/api/v1/ws";
+            const url = `${wsBase}/${symbol}`;
 
             ws.current = new WebSocket(url);
 
