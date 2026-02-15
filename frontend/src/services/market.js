@@ -1,4 +1,7 @@
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const PROD_API = "https://insightai-gchi.onrender.com/api/v1";
+const API_BASE_URL = import.meta.env.MODE === 'production'
+    ? PROD_API
+    : "http://localhost:8000/api/v1";
 
 export const market = {
     /**
