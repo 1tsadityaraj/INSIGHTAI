@@ -38,7 +38,8 @@ export const market = {
             const symbolsStr = symbols.join(",");
             const response = await fetch(`${API_BASE_URL}/compare?symbols=${symbolsStr}&range=${range}`);
             if (!response.ok) throw new Error("Failed to fetch comparison");
-            return await response.json();
+            const data = await response.json();
+            return data && data.datasets ? data : { mode: "comparison", range, datasets: [] };
         } catch (error) {
             console.error("Comparison Error:", error);
             throw error;
@@ -49,7 +50,8 @@ export const market = {
         try {
             const response = await fetch(`${API_BASE_URL}/heatmap?limit=${limit}`);
             if (!response.ok) throw new Error("Failed to fetch heatmap");
-            return await response.json();
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
         } catch (error) {
             console.error("Heatmap Error:", error);
             return [];
