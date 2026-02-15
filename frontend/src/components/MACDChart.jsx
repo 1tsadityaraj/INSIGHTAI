@@ -51,6 +51,7 @@ const MACDChart = ({ data, days }) => {
                         contentStyle={{ borderRadius: '12px', border: `1px solid ${tooltipBorder}`, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', backgroundColor: tooltipBg, color: isDark ? '#F9FAFB' : '#111' }}
                         labelStyle={{ color: tickColor, fontSize: '12px' }}
                         itemStyle={{ fontSize: '12px' }}
+                        formatter={(value, name) => [value?.toFixed(2), name]}
                     />
                     <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                     <ReferenceLine y={0} stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} strokeDasharray="3 3" />

@@ -58,7 +58,13 @@ class MarketService:
             data = await robust_fetch()
             
             # 4. Cache Store (if valid)
-            if data and isinstance(data, dict) and "error" not in data:
+            should_cache = False
+            if isinstance(data, dict) and "error" not in data:
+                should_cache = True
+            elif isinstance(data, list) and data:
+                should_cache = True
+
+            if should_cache:
                 await self.cache.set(key, data, ttl)
                 
             return data
@@ -455,20 +461,26 @@ class MarketService:
             }
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(url, params=params)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return [
-                        {
-                            "id": coin.get("id"),
-                            "symbol": coin.get("symbol", "").upper(),
-                            "name": coin.get("name"),
-                            "price": coin.get("current_price"),
-                            "change_24h": coin.get("price_change_percentage_24h"),
-                            "market_cap": coin.get("market_cap"),
-                            "volume": coin.get("total_volume")
-                        } for coin in data
-                    ]
-            return []
+                
+                # Explicit Retry Triggers
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    raise ConnectionError(f"Retryable Error: {resp.status_code}")
+                
+                if resp.status_code != 200:
+                    return []
+
+                data = resp.json()
+                return [
+                    {
+                        "id": coin.get("id"),
+                        "symbol": coin.get("symbol", "").upper(),
+                        "name": coin.get("name"),
+                        "price": coin.get("current_price"),
+                        "change_24h": coin.get("price_change_percentage_24h"),
+                        "market_cap": coin.get("market_cap"),
+                        "volume": coin.get("total_volume")
+                    } for coin in data
+                ]
 
         # Heatmap cached for 5 minutes (300s)
         return await self._get_cached_or_fetch(cache_key, fetch, ttl=300, background_tasks=background_tasks)
