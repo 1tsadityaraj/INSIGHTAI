@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 from app.utils.logger import logger
 from app.services.cache import CacheService
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from app.data.mock_data import get_mock_data
 
 class MarketService:
     BASE_URL = "https://api.coingecko.com/api/v3"
@@ -333,6 +334,41 @@ class MarketService:
         """
         Coordinates fetching KPI, Chart, and Health Score.
         """
+        # Mock Data Interception
+        if symbol.startswith("demo-"):
+            mock_base, mock_prices = get_mock_data(symbol)
+            if mock_base and mock_prices:
+                # Process Chart
+                values = [p[1] for p in mock_prices] # prices
+                labels = []
+                for p in mock_prices:
+                    ts = p[0] / 1000
+                    dt = datetime.datetime.fromtimestamp(ts)
+                    labels.append(dt.strftime('%b %d'))
+                
+                # Calculate Indicators
+                sma = self.calculate_sma(values)
+                ema = self.calculate_ema(values)
+                rsi = self.calculate_rsi(values)
+                macd_data = self.calculate_macd(values)
+                
+                chart_data = {
+                    "labels": labels,
+                    "values": values,
+                    "sma": sma,
+                    "ema": ema,
+                    "rsi": rsi,
+                    "macd": macd_data["macd"],
+                    "macd_signal": macd_data["signal"],
+                    "macd_histogram": macd_data["histogram"],
+                    "signal_type": macd_data["trend"]
+                }
+                
+                return {
+                    "kpi": mock_base["kpi"],
+                    "chart": chart_data,
+                    "market_score": mock_base["market_score"]
+                }
         # Parallel fetch could be better here, but maintaining seq for simplicity or using gather
         import asyncio
         

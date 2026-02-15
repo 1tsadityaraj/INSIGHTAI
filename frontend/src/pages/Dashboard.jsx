@@ -478,7 +478,10 @@ const Dashboard = () => {
                 </div>
 
                 <div className="p-4 bg-transparent border-t border-border">
-                    <ChatInput onSend={handleSend} isLoading={isLoading} />
+                    <ChatInput onSend={handleSend} isLoading={isLoading} onDemoClick={(id) => {
+                        setActiveAssetId(id);
+                        fetchMarketData(id, range);
+                    }} />
                 </div>
             </div>
 

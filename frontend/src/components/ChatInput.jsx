@@ -7,7 +7,7 @@ import { Send, Loader2 } from "lucide-react";
  * @param {Function} onSend - Callback when user submits a query.
  * @param {boolean} isLoading - Visual state for the submit button.
  */
-const ChatInput = ({ onSend, isLoading }) => {
+const ChatInput = ({ onSend, isLoading, onDemoClick }) => {
     const [query, setQuery] = useState("");
 
     const handleSubmit = (e) => {
@@ -17,21 +17,45 @@ const ChatInput = ({ onSend, isLoading }) => {
             setQuery("");
         }
     };
-
     const handleKeyDown = (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSubmit(e);
         }
     };
-
     return (
         <form
             onSubmit={handleSubmit}
             className="p-4"
         >
+            {/* Quick Demo Actions */}
+            <div className="flex gap-2 mb-3 justify-center overflow-x-auto pb-1 scrollbar-hide">
+                <button
+                    type="button"
+                    onClick={() => onDemoClick?.('demo-bitcoin')}
+                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                >
+                    Bitcoin (Demo)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onDemoClick?.('demo-usdinr')}
+                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                >
+                    USD / INR
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onDemoClick?.('demo-nvidia')}
+                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                >
+                    Nvidia (Stock)
+                </button>
+            </div>
+
             <div className="max-w-3xl mx-auto relative flex items-center">
                 <input
+                    // ... (rest is same)
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
