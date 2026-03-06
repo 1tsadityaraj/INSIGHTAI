@@ -9,7 +9,8 @@ import {
     Tooltip,
     Legend,
     ResponsiveContainer,
-    ReferenceLine
+    ReferenceLine,
+    Cell
 } from "recharts";
 import { useTheme } from '../context/themeContext';
 
@@ -33,8 +34,11 @@ const MACDChart = ({ data }) => {
     const tooltipBg = isDark ? '#1F2937' : '#FFFFFF';
     const tooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
+    const positiveColor = isDark ? '#22C55E' : '#16A34A';
+    const negativeColor = isDark ? '#EF4444' : '#DC2626';
+
     return (
-        <div className="h-48 w-full mt-4 ui-panel p-4">
+        <div className="h-48 w-full mt-4 ui-panel p-4 overflow-hidden">
             <h4 className="text-[10px] font-bold text-ink-dim uppercase tracking-widest mb-2">MACD Signal Protocol (12, 26, 9)</h4>
             <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData}>
@@ -58,9 +62,12 @@ const MACDChart = ({ data }) => {
                     <Bar
                         dataKey="histogram"
                         name="Histogram"
-                        fill={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
                         barSize={4}
-                    />
+                    >
+                        {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.histogram >= 0 ? positiveColor : negativeColor} />
+                        ))}
+                    </Bar>
                     <Line type="monotone" dataKey="macd" name="MACD" stroke="#3b82f6" dot={false} strokeWidth={1.5} />
                     <Line type="monotone" dataKey="signal" name="Signal" stroke="#f97316" dot={false} strokeWidth={1.5} />
                 </ComposedChart>
