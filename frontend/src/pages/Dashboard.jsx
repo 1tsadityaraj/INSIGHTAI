@@ -260,7 +260,7 @@ const Dashboard = () => {
             <div className="ui-container py-6">
                 <div className="flex flex-col lg:flex-row gap-6 h-[calc(100dvh-3rem)]">
                     {/* Left Panel */}
-                    <div className="lg:w-[65%] flex flex-col space-y-6 min-h-0 overflow-y-auto scroll-smooth pr-1 ui-animate-in">
+                    <div className="lg:w-[65%] flex flex-col space-y-6 overflow-y-auto scroll-smooth pr-1 ui-animate-in pb-10">
                         <header className="flex flex-col gap-2 mb-2">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-primary font-bold text-2xl">
@@ -353,8 +353,8 @@ const Dashboard = () => {
                                 ) : null}
 
                                 {/* Main Content Area */}
-                                <div className="flex-grow flex flex-col space-y-4 min-h-0">
-                                    <div className="ui-panel-elevated overflow-hidden flex flex-col min-h-[500px] ui-animate-in">
+                                <div className="flex flex-col space-y-4 shrink-0">
+                                    <div className="ui-panel-elevated overflow-hidden flex flex-col min-h-[500px] shrink-0 ui-animate-in">
 
                                         {/* Toolbar / Controls */}
                                         <div className="p-4 border-b border-border flex justify-between items-center bg-base/50 backdrop-blur-sm">

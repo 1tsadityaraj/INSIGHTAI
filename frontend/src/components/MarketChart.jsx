@@ -103,7 +103,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
             </div>
 
             {/* Main Price Chart */}
-            <div className={`w-full transition-all duration-300 ${showRSI && !isComparison ? 'h-[250px]' : 'flex-grow min-h-[300px]'}`}>
+            <div className={`relative w-full transition-all duration-300 ${showRSI && !isComparison ? 'h-[250px]' : 'flex-grow min-h-[300px]'}`}>
                 <ResponsiveContainer width="100%" height="100%">
                     {isComparison ? (
                         <LineChart data={chartData}>
@@ -213,7 +213,7 @@ const MarketChart = ({ data, coinName, days, comparisonData = [], isPercentage =
 
             {/* RSI Sub-Chart */}
             {showRSI && !isComparison && (
-                <div className="w-full h-[100px] mt-4 pt-4 border-t border-border/30">
+                <div className="relative w-full h-[100px] mt-4 pt-4 border-t border-border/30">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} opacity={0.3} />

@@ -38,40 +38,42 @@ const MACDChart = ({ data }) => {
     const negativeColor = isDark ? '#EF4444' : '#DC2626';
 
     return (
-        <div className="h-48 w-full mt-4 ui-panel p-4 overflow-hidden">
-            <h4 className="text-[10px] font-bold text-ink-dim uppercase tracking-widest mb-2">MACD Signal Protocol (12, 26, 9)</h4>
-            <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
-                    <XAxis dataKey="date" hide={true} />
-                    <YAxis
-                        domain={['auto', 'auto']}
-                        orientation="right"
-                        tick={{ fontSize: 10, fill: tickColor }}
-                        axisLine={false}
-                        tickLine={false}
-                    />
-                    <Tooltip
-                        contentStyle={{ borderRadius: '12px', border: `1px solid ${tooltipBorder}`, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', backgroundColor: tooltipBg, color: isDark ? '#F9FAFB' : '#111' }}
-                        labelStyle={{ color: tickColor, fontSize: '12px' }}
-                        itemStyle={{ fontSize: '12px' }}
-                        formatter={(value, name) => [value?.toFixed(2), name]}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                    <ReferenceLine y={0} stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} strokeDasharray="3 3" />
-                    <Bar
-                        dataKey="histogram"
-                        name="Histogram"
-                        barSize={4}
-                    >
-                        {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.histogram >= 0 ? positiveColor : negativeColor} />
-                        ))}
-                    </Bar>
-                    <Line type="monotone" dataKey="macd" name="MACD" stroke="#3b82f6" dot={false} strokeWidth={1.5} />
-                    <Line type="monotone" dataKey="signal" name="Signal" stroke="#f97316" dot={false} strokeWidth={1.5} />
-                </ComposedChart>
-            </ResponsiveContainer>
+        <div className="relative h-48 w-full mt-4 ui-panel p-4 overflow-hidden">
+            <h4 className="text-[10px] font-bold text-ink-dim uppercase tracking-widest mb-2 relative z-10">MACD Signal Protocol (12, 26, 9)</h4>
+            <div className="absolute inset-0 pt-10 px-4 pb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+                        <XAxis dataKey="date" hide={true} />
+                        <YAxis
+                            domain={['auto', 'auto']}
+                            orientation="right"
+                            tick={{ fontSize: 10, fill: tickColor }}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <Tooltip
+                            contentStyle={{ borderRadius: '12px', border: `1px solid ${tooltipBorder}`, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', backgroundColor: tooltipBg, color: isDark ? '#F9FAFB' : '#111' }}
+                            labelStyle={{ color: tickColor, fontSize: '12px' }}
+                            itemStyle={{ fontSize: '12px' }}
+                            formatter={(value, name) => [value?.toFixed(2), name]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                        <ReferenceLine y={0} stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} strokeDasharray="3 3" />
+                        <Bar
+                            dataKey="histogram"
+                            name="Histogram"
+                            barSize={4}
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.histogram >= 0 ? positiveColor : negativeColor} />
+                            ))}
+                        </Bar>
+                        <Line type="monotone" dataKey="macd" name="MACD" stroke="#3b82f6" dot={false} strokeWidth={1.5} />
+                        <Line type="monotone" dataKey="signal" name="Signal" stroke="#f97316" dot={false} strokeWidth={1.5} />
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 };
