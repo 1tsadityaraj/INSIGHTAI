@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowUp, ArrowDown, Activity } from "lucide-react";
 import { market } from "../services/market";
-import { UI_CONFIG, getHeatmapColor, formatPrice, formatLargeNumber } from "../config/ui-config";
+import { UI_CONFIG, formatPrice, formatLargeNumber } from "../config/ui-config";
 
 const HeatmapGrid = () => {
     const [coins, setCoins] = useState([]);
@@ -23,7 +23,7 @@ const HeatmapGrid = () => {
         return () => { active = false; clearInterval(interval); };
     }, []);
 
-    if (loading) return <div className="h-48 bg-surface rounded-2xl animate-pulse border border-border"></div>;
+    if (loading) return <div className="h-48 ui-panel ui-shimmer"></div>;
 
     return (
         <div className={UI_CONFIG.card.section}>
@@ -43,7 +43,7 @@ const HeatmapGrid = () => {
                     return (
                         <div
                             key={coin.id}
-                            className="relative rounded-xl p-4 flex flex-col justify-center items-center hover:-translate-y-1 hover:shadow-2xl transition-all duration-200 cursor-pointer border border-white/5"
+                            className="relative rounded-2xl p-4 flex flex-col justify-center items-center transition-all duration-200 cursor-pointer border border-white/10 hover:-translate-y-0.5"
                             style={{ background: gradient }}
                             onMouseEnter={() => setHoveredCoin(coin.id)}
                             onMouseLeave={() => setHoveredCoin(null)}
@@ -56,7 +56,7 @@ const HeatmapGrid = () => {
 
                             {/* Premium Tooltip */}
                             {isHovered && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-surface rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] border border-border p-3 z-50 w-52 text-left pointer-events-none">
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 ui-popover p-3 z-50 w-56 text-left pointer-events-none">
                                     <div className="space-y-1.5 text-xs">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>

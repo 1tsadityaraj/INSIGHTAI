@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import {
     ComposedChart,
     Bar,
@@ -11,9 +11,9 @@ import {
     ResponsiveContainer,
     ReferenceLine
 } from "recharts";
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/themeContext';
 
-const MACDChart = ({ data, days }) => {
+const MACDChart = ({ data }) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     if (!data || !data.labels || data.labels.length === 0) return null;
@@ -34,7 +34,7 @@ const MACDChart = ({ data, days }) => {
     const tooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
     return (
-        <div className="h-48 w-full mt-4 bg-surface rounded-xl border border-border shadow-[0_8px_24px_rgba(0,0,0,0.35)] p-4">
+        <div className="h-48 w-full mt-4 ui-panel p-4">
             <h4 className="text-[10px] font-bold text-ink-dim uppercase tracking-widest mb-2">MACD Signal Protocol (12, 26, 9)</h4>
             <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData}>

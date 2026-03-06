@@ -6,7 +6,7 @@ const KPICard = ({ label, value, subValue, icon: Icon, trend, showLiveIndicator 
     const isNegative = trend === 'down';
 
     return (
-        <div className="h-full min-h-[110px] p-5 rounded-2xl border border-border bg-surface card-luxury flex flex-col justify-between group">
+        <div className="ui-panel ui-panel-hover h-full min-h-[110px] p-5 flex flex-col justify-between group">
             {/* Header with icon */}
             <div className="flex justify-between items-start">
                 <span className="text-[10px] text-ink-dim font-bold uppercase tracking-[0.12em] opacity-80">{label}</span>
@@ -19,7 +19,7 @@ const KPICard = ({ label, value, subValue, icon: Icon, trend, showLiveIndicator 
                             </span>
                         </div>
                     )}
-                    {Icon && <Icon className="w-3.5 h-3.5 text-ink-muted opacity-60 group-hover:opacity-100 transition-opacity" />}
+                    {Icon && <Icon className="w-3.5 h-3.5 text-ink-muted opacity-70 group-hover:opacity-100 transition-opacity" />}
                 </div>
             </div>
 

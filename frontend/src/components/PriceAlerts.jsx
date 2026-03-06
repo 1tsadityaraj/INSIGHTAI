@@ -10,7 +10,8 @@ const PriceAlerts = ({ currentPrice, symbol }) => {
     // Initial Load
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem(`alerts-${symbol}`)) || [];
-        setAlerts(stored);
+        const t = setTimeout(() => setAlerts(stored), 0);
+        return () => clearTimeout(t);
     }, [symbol]);
 
     // Save Updates
@@ -78,16 +79,24 @@ const PriceAlerts = ({ currentPrice, symbol }) => {
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors relative"
+                className="ui-icon-btn relative rounded-full border-0 bg-transparent hover:bg-surface-elevated"
+                aria-haspopup="dialog"
+                aria-expanded={isOpen}
+                aria-controls="price-alerts-popover"
             >
-                {alerts.some(a => !a.triggered) ? <BellRing className="w-5 h-5 text-orange-500" /> : <Bell className="w-5 h-5 text-gray-400 dark:text-slate-500" />}
+                {alerts.some(a => !a.triggered)
+                    ? <BellRing className="w-5 h-5 text-warning" />
+                    : <Bell className="w-5 h-5 text-ink-muted" />
+                }
                 {alerts.length > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full text-[8px] flex items-center justify-center text-white font-bold">{alerts.filter(a => !a.triggered).length}</span>
+                    <span className="absolute top-0 right-0 min-w-3 h-3 px-1 bg-error rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+                        {alerts.filter(a => !a.triggered).length}
+                    </span>
                 )}
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-surface border border-border shadow-xl rounded-xl z-50 p-4">
+                <div id="price-alerts-popover" className="absolute right-0 top-12 w-72 ui-popover z-50 p-4">
                     <div className="flex justify-between items-center mb-3">
                         <h4 className="font-bold text-ink text-sm">Price Alerts ({symbol?.toUpperCase()})</h4>
                         <button onClick={() => setIsOpen(false)}><X className="w-4 h-4 text-ink-dim hover:text-ink" /></button>
@@ -99,24 +108,32 @@ const PriceAlerts = ({ currentPrice, symbol }) => {
                             value={targetPrice}
                             onChange={(e) => setTargetPrice(e.target.value)}
                             placeholder="Target Price..."
-                            className="w-full text-xs p-2 border border-gray-200 dark:border-slate-600 rounded-lg outline-none focus:border-primary dark:bg-slate-700 dark:text-slate-100"
+                            className="ui-input ui-input-sm"
                         />
                         <button
                             onClick={addAlert}
-                            className="bg-primary text-white p-2 rounded-lg hover:bg-primary/90"
+                            className="bg-primary text-white p-2 rounded-lg hover:bg-primary/90 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
                         </button>
                     </div>
 
                     <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {alerts.length === 0 && <p className="text-xs text-gray-400 dark:text-slate-500 text-center py-2">No active alerts</p>}
+                        {alerts.length === 0 && <p className="text-xs text-ink-muted text-center py-2">No active alerts</p>}
                         {alerts.map((alert) => (
-                            <div key={alert.id} className={`flex justify-between items-center text-xs p-2 rounded-lg ${alert.triggered ? 'bg-gray-50 dark:bg-slate-900 opacity-60' : 'bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50'}`}>
-                                <span className={alert.triggered ? 'line-through text-gray-400 dark:text-slate-600' : 'font-semibold text-gray-700 dark:text-slate-200'}>
+                            <div
+                                key={alert.id}
+                                className={`flex justify-between items-center text-xs p-2 rounded-xl ${alert.triggered
+                                    ? 'bg-base opacity-60 border border-border'
+                                    : 'bg-warning/10 border border-warning/20'
+                                    }`}
+                            >
+                                <span className={alert.triggered ? 'line-through text-ink-muted' : 'font-semibold text-ink'}>
                                     {alert.condition} ${alert.price.toLocaleString()}
                                 </span>
-                                <button onClick={() => removeAlert(alert.id)} className="text-gray-400 dark:text-slate-500 hover:text-red-500"><X className="w-3 h-3" /></button>
+                                <button onClick={() => removeAlert(alert.id)} className="text-ink-muted hover:text-error transition-colors">
+                                    <X className="w-3 h-3" />
+                                </button>
                             </div>
                         ))}
                     </div>

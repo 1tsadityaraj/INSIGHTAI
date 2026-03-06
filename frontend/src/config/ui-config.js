@@ -3,8 +3,8 @@
 export const UI_CONFIG = {
     // Card Styles (Refined)
     card: {
-        base: "h-full min-h-[110px] p-5 rounded-2xl border border-border bg-surface shadow-[0_8px_24px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:translate-y-[-2px] transition-all duration-200 ease-out",
-        section: "bg-surface rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-border p-6 mb-6",
+        base: "h-full min-h-[110px] p-5 rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)] flex flex-col justify-between hover:translate-y-[-2px] transition-all duration-200 ease-out",
+        section: "bg-surface rounded-2xl shadow-[var(--shadow-card)] border border-border p-6 mb-6",
     },
 
     // Typography (Refined weights)

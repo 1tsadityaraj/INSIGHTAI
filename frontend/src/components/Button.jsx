@@ -38,15 +38,15 @@ const Button = ({
 
     const variants = {
         primary: active
-            ? "bg-primary text-white shadow-xl scale-[0.98]"
-            : "bg-primary text-white hover:bg-blue-600 focus:ring-blue-500 shadow-[0_4px_12px_rgba(59,130,246,0.3)] hover:shadow-[0_8px_20px_rgba(59,130,246,0.4)]",
+            ? "bg-primary text-white shadow-[var(--shadow-soft)] scale-[0.98]"
+            : "bg-primary text-white hover:bg-primary/90 focus:ring-primary/40 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-card)]",
         secondary: active
             ? "bg-surface text-ink scale-[0.98] border border-border"
             : "bg-surface text-ink-dim border border-border hover:bg-base hover:text-ink focus:ring-border",
         outline: active
             ? "border border-primary text-primary bg-primary/5 scale-[0.98]"
             : "border border-border text-ink-dim hover:border-primary hover:text-primary hover:bg-primary/5 focus:ring-primary/30",
-        danger: "bg-error text-white hover:bg-red-600 focus:ring-error shadow-[0_4px_12px_rgba(239,68,68,0.3)] hover:shadow-[0_8px_20px_rgba(239,68,68,0.4)]",
+        danger: "bg-error text-white hover:bg-error/90 focus:ring-error/40 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-card)]",
     };
 
     const sizes = {

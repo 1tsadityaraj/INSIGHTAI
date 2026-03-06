@@ -6,11 +6,11 @@ const FloatingStatusBubble = ({ isProcessing }) => {
 
     useEffect(() => {
         if (isProcessing) {
-            setIsVisible(true);
-        } else {
-            const timer = setTimeout(() => setIsVisible(false), 2000); // Keep visible for success state briefly
-            return () => clearTimeout(timer);
+            const showTimer = setTimeout(() => setIsVisible(true), 0);
+            return () => clearTimeout(showTimer);
         }
+        const hideTimer = setTimeout(() => setIsVisible(false), 2000); // Keep visible for success state briefly
+        return () => clearTimeout(hideTimer);
     }, [isProcessing]);
 
     if (!isVisible) return null;

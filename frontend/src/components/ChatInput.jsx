@@ -26,34 +26,34 @@ const ChatInput = ({ onSend, isLoading, onDemoClick }) => {
     return (
         <form
             onSubmit={handleSubmit}
-            className="p-4"
+            className="w-full"
         >
             {/* Quick Demo Actions */}
-            <div className="flex gap-2 mb-3 justify-center overflow-x-auto pb-1 scrollbar-hide">
+            <div className="flex gap-2 mb-3 justify-start overflow-x-auto pb-1 scrollbar-hide">
                 <button
                     type="button"
                     onClick={() => onDemoClick?.('demo-bitcoin')}
-                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                    className="ui-chip"
                 >
                     Bitcoin (Demo)
                 </button>
                 <button
                     type="button"
                     onClick={() => onDemoClick?.('demo-usdinr')}
-                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                    className="ui-chip"
                 >
                     USD / INR
                 </button>
                 <button
                     type="button"
                     onClick={() => onDemoClick?.('demo-nvidia')}
-                    className="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded-full text-[10px] font-bold text-ink-dim hover:text-primary hover:border-primary/50 transition-colors uppercase tracking-wide"
+                    className="ui-chip"
                 >
                     Nvidia (Stock)
                 </button>
             </div>
 
-            <div className="max-w-3xl mx-auto relative flex items-center">
+            <div className="ui-panel px-3 py-2 flex items-center gap-2">
                 <input
                     // ... (rest is same)
                     type="text"
@@ -62,15 +62,16 @@ const ChatInput = ({ onSend, isLoading, onDemoClick }) => {
                     onKeyDown={handleKeyDown}
                     placeholder="Ask InsightAI anything..."
                     disabled={isLoading}
-                    className="w-full bg-base border border-border rounded-[14px] py-3 pl-6 pr-14 focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:outline-none shadow-sm text-ink placeholder-ink-dim/40 transition-all duration-200"
+                    className="ui-input border-0 bg-transparent shadow-none focus:ring-0 focus:border-transparent px-2 py-2.5"
                 />
                 <button
                     type="submit"
                     disabled={!query.trim() || isLoading}
-                    className={`absolute right-3 p-2 rounded-lg transition-all ${query.trim() && !isLoading
-                        ? "text-primary hover:bg-primary/10"
-                        : "text-ink-dim/30 cursor-not-allowed"
-                        }`}
+                    className={`p-2 rounded-xl transition-colors ${query.trim() && !isLoading
+                        ? "bg-primary text-white hover:bg-primary/90"
+                        : "bg-border text-ink-muted cursor-not-allowed"
+                        } active:scale-[0.98]`}
+                    aria-label="Send message"
                 >
                     {isLoading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />

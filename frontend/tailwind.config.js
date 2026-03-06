@@ -8,11 +8,10 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Light Mode
-                primary: "#10B981", // Emerald 500
-                secondary: "#3B82F6", // Blue 500
-                background: "#F9FAFB", // Gray 50
-                surface: "#FFFFFF",
+                // Brand
+                // Keep in sync with `src/index.css` design tokens.
+                primary: "#3B82F6",   // Blue 500
+                secondary: "#10B981", // Emerald 500
 
                 // Trading Colors (Premium) - Work in both modes
                 trading: {

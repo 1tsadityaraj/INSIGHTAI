@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/themeContext';
 import { UI_CONFIG } from '../config/ui-config';
 
 const COLORS = ["#60A5FA", "#82ca9d", "#ffc658", "#ff7300"];

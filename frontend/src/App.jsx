@@ -1,9 +1,8 @@
 import React from 'react';
 import Dashboard from './pages/Dashboard';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeProvider';
 
 function App() {
-  console.log("App.jsx: Rendering...");
   return (
     <ThemeProvider>
       <div data-testid="app-root">

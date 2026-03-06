@@ -1,25 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Plus, Trash2, PieChart, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { market } from "../services/market";
 import { UI_CONFIG } from "../config/ui-config";
 import Button from "./Button";
 
 const Portfolio = ({ active }) => {
-    const [holdings, setHoldings] = useState([]);
+    const [holdings, setHoldings] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("portfolio")) || [];
+        } catch {
+            return [];
+        }
+    });
     const [prices, setPrices] = useState({});
-    const [totalValue, setTotalValue] = useState(0);
-    const [totalCost, setTotalCost] = useState(0);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newCoin, setNewCoin] = useState("bitcoin");
     const [newAmount, setNewAmount] = useState("");
     const [newAvgPrice, setNewAvgPrice] = useState("");
-
-    // Load from local storage
-    useEffect(() => {
-        const stored = JSON.parse(localStorage.getItem("portfolio")) || [];
-        setHoldings(stored);
-    }, []);
 
     // Save to local storage
     useEffect(() => {
@@ -57,8 +55,7 @@ const Portfolio = ({ active }) => {
         return () => clearInterval(interval);
     }, [holdings, active]);
 
-    // Calculate totals
-    useEffect(() => {
+    const { totalValue, totalCost } = useMemo(() => {
         let val = 0;
         let cost = 0;
         holdings.forEach(h => {
@@ -66,8 +63,7 @@ const Portfolio = ({ active }) => {
             val += h.amount * p;
             cost += h.amount * (h.avgPrice || p);
         });
-        setTotalValue(val);
-        setTotalCost(cost);
+        return { totalValue: val, totalCost: cost };
     }, [prices, holdings]);
 
     const addAsset = () => {
@@ -197,32 +193,32 @@ const Portfolio = ({ active }) => {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
-                        <h3 className="font-bold text-lg mb-4 dark:text-slate-100">Add Asset</h3>
+                    <div className="ui-popover rounded-2xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95">
+                        <h3 className="font-bold text-lg mb-4 text-ink">Add Asset</h3>
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Symbol (e.g. bitcoin)</label>
+                                <label className="block text-xs font-bold text-ink-dim mb-1">Symbol (e.g. bitcoin)</label>
                                 <input
-                                    className="w-full border border-gray-200 dark:border-slate-600 rounded-lg p-2 outline-none focus:border-primary dark:bg-slate-700 dark:text-slate-100"
+                                    className="ui-input ui-input-sm"
                                     value={newCoin}
                                     onChange={e => setNewCoin(e.target.value.toLowerCase())}
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Amount</label>
+                                <label className="block text-xs font-bold text-ink-dim mb-1">Amount</label>
                                 <input
                                     type="number"
-                                    className="w-full border border-gray-200 dark:border-slate-600 rounded-lg p-2 outline-none focus:border-primary dark:bg-slate-700 dark:text-slate-100"
+                                    className="ui-input ui-input-sm"
                                     value={newAmount}
                                     onChange={e => setNewAmount(e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-1">Avg Buy Price (Optional)</label>
+                                <label className="block text-xs font-bold text-ink-dim mb-1">Avg Buy Price (Optional)</label>
                                 <input
                                     type="number"
                                     placeholder="Leave empty for current price"
-                                    className="w-full border border-gray-200 dark:border-slate-600 rounded-lg p-2 outline-none focus:border-primary dark:bg-slate-700 dark:text-slate-100"
+                                    className="ui-input ui-input-sm"
                                     value={newAvgPrice}
                                     onChange={e => setNewAvgPrice(e.target.value)}
                                 />
